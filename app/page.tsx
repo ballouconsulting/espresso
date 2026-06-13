@@ -282,14 +282,14 @@ export default function Home() {
           <h2>Learn from the people<br />who taught us.</h2>
         </div>
         <div className="source-links">
-          <a href="https://www.youtube.com/@jameshoffmann" target="_blank" rel="noreferrer">
-            <span>Video library</span><strong>James Hoffmann on YouTube</strong><Arrow />
+          <a href="https://www.youtube.com/playlist?list=PLxz0FjZMVOl3MuAzK5l3gjakoOGrmK8fP" target="_blank" rel="noreferrer">
+            <span>Start here</span><strong>Understanding Espresso</strong><Arrow />
           </a>
           <a href="https://www.baristahustle.com/blog/the-espresso-compass/" target="_blank" rel="noreferrer">
             <span>Reference</span><strong>The Espresso Compass</strong><Arrow />
           </a>
-          <a href="https://sca.coffee/research/protocols-best-practices" target="_blank" rel="noreferrer">
-            <span>Standards</span><strong>SCA protocols & best practices</strong><Arrow />
+          <a href="https://www.youtube.com/@LanceHedrick" target="_blank" rel="noreferrer">
+            <span>Video library</span><strong>Lance Hedrick on YouTube</strong><Arrow />
           </a>
         </div>
       </section>

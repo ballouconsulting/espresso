@@ -58,8 +58,30 @@ npm audit        # dependency security report
 Dependencies are pinned in `package.json` and fully resolved in
 `package-lock.json` so local, CI, and Vercel builds use the same versions.
 
+## Change workflow
+
+For normal changes, work on a feature branch and review the local diff before
+publishing it:
+
+```bash
+git switch -c codex/short-description
+npm run lint
+npm run build
+coderabbit review
+git add .
+git commit -m "Short description"
+git push -u origin HEAD
+gh pr create --draft --fill
+```
+
+CodeRabbit CLI requires a one-time `coderabbit auth login`. Use
+`coderabbit review` for a readable terminal review or `coderabbit review
+--agent` when a coding agent will process the findings. The local review
+provides fast feedback before publishing; CodeRabbit's GitHub app then reviews
+the pull request alongside GitHub Actions and Vercel's preview deployment.
+
 ## Content references
 
-- [James Hoffmann on YouTube](https://www.youtube.com/@jameshoffmann)
+- [Understanding Espresso by James Hoffmann](https://www.youtube.com/playlist?list=PLxz0FjZMVOl3MuAzK5l3gjakoOGrmK8fP)
 - [Barista Hustle Espresso Compass](https://www.baristahustle.com/blog/the-espresso-compass/)
-- [Specialty Coffee Association protocols](https://sca.coffee/research/protocols-best-practices)
+- [Lance Hedrick on YouTube](https://www.youtube.com/@LanceHedrick)
