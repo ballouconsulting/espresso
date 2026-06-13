@@ -83,5 +83,5 @@ the pull request alongside GitHub Actions and Vercel's preview deployment.
 ## Content references
 
 - [Understanding Espresso by James Hoffmann](https://www.youtube.com/playlist?list=PLxz0FjZMVOl3MuAzK5l3gjakoOGrmK8fP)
-- [Barista Hustle Espresso Compass](https://www.baristahustle.com/blog/the-espresso-compass/)
-- [Lance Hedrick on YouTube](https://www.youtube.com/@LanceHedrick)
+- [A Beginner's Guide To Fixing Bad Espresso by James Hoffmann](https://www.youtube.com/watch?v=MbTD42FvMVU)
+- [The Best Espresso Tutorial (Part 2) by Lance Hedrick](https://www.youtube.com/watch?v=I6ti6NMCqsc)

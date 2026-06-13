@@ -285,11 +285,11 @@ export default function Home() {
           <a href="https://www.youtube.com/playlist?list=PLxz0FjZMVOl3MuAzK5l3gjakoOGrmK8fP" target="_blank" rel="noreferrer">
             <span>Start here</span><strong>Understanding Espresso</strong><Arrow />
           </a>
-          <a href="https://www.baristahustle.com/blog/the-espresso-compass/" target="_blank" rel="noreferrer">
-            <span>Reference</span><strong>The Espresso Compass</strong><Arrow />
+          <a href="https://www.youtube.com/watch?v=MbTD42FvMVU" target="_blank" rel="noreferrer">
+            <span>Practical guide</span><strong>Fixing Bad Espresso</strong><Arrow />
           </a>
-          <a href="https://www.youtube.com/@LanceHedrick" target="_blank" rel="noreferrer">
-            <span>Video library</span><strong>Lance Hedrick on YouTube</strong><Arrow />
+          <a href="https://www.youtube.com/watch?v=I6ti6NMCqsc" target="_blank" rel="noreferrer">
+            <span>Deep dive</span><strong>Lance&apos;s Espresso Tutorial</strong><Arrow />
           </a>
         </div>
       </section>
