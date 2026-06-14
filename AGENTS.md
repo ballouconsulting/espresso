@@ -29,6 +29,7 @@ source of truth for both humans and coding agents.
 Run before publishing changes:
 
 ```bash
+npm test
 npm run lint
 npm run build
 ```
