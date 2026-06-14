@@ -6,6 +6,12 @@ This project intentionally has no backend or database. That keeps the first
 deployment focused on the core workflow: build locally, version with Git,
 push to GitHub, and let a hosting platform deploy each change.
 
+## Project Documentation
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) is the canonical development, review, and
+  publishing workflow.
+- [AGENTS.md](AGENTS.md) gives platform-neutral guidance to coding agents.
+
 ## Stack
 
 - Next.js + React + TypeScript
@@ -58,27 +64,12 @@ npm audit        # dependency security report
 Dependencies are pinned in `package.json` and fully resolved in
 `package-lock.json` so local, CI, and Vercel builds use the same versions.
 
-## Change workflow
+## Change Workflow
 
-For normal changes, work on a feature branch and review the local diff before
-publishing it:
-
-```bash
-git switch -c codex/short-description
-npm run lint
-npm run build
-coderabbit review
-git add .
-git commit -m "Short description"
-git push -u origin HEAD
-gh pr create --draft --fill
-```
-
-CodeRabbit CLI requires a one-time `coderabbit auth login`. Use
-`coderabbit review` for a readable terminal review or `coderabbit review
---agent` when a coding agent will process the findings. The local review
-provides fast feedback before publishing; CodeRabbit's GitHub app then reviews
-the pull request alongside GitHub Actions and Vercel's preview deployment.
+Use focused feature branches and pull requests for normal changes. Local lint
+and build checks run before publishing; GitHub Actions, CodeRabbit, and Vercel
+then verify the pull request. See [CONTRIBUTING.md](CONTRIBUTING.md) for the
+complete workflow.
 
 ## Content references
 
