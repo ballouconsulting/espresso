@@ -49,9 +49,9 @@ There are no servers for you to maintain for this project. Vercel provides a
 free `*.vercel.app` address and HTTPS certificate. You can later buy a custom
 domain and point it at the same deployment.
 
-GitHub Actions is configured in `.github/workflows/ci.yml`. It runs lint and a
-production build on pushes and pull requests, giving you a separate automated
-check before deployment.
+GitHub Actions is configured in `.github/workflows/ci.yml`. It runs tests, lint,
+and a production build on pushes and pull requests, giving you a separate
+automated check before deployment.
 
 ## Useful commands
 
