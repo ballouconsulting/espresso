@@ -35,6 +35,7 @@ refactors.
 Always run:
 
 ```bash
+npm test
 npm run lint
 npm run build
 ```
