@@ -50,6 +50,9 @@ coderabbit review
 The CodeRabbit CLI reviews local Git changes before publishing. CodeRabbit's
 GitHub integration separately reviews the final pull request diff.
 
+If `gh auth status` reports an invalid token in a restricted environment,
+retry with normal network access before reauthenticating.
+
 Dependencies are pinned in `package.json` and `package-lock.json`. Moderate
 dependency vulnerabilities are acceptable for this learning project; high or
 critical vulnerabilities must be addressed before merging.
@@ -69,13 +72,17 @@ work that benefits from early preview, CI, or review feedback.
 
 A pull request triggers:
 
-- GitHub Actions to lint and build
+- GitHub Actions to test, lint, and build
 - Vercel to create a preview deployment
 - CodeRabbit to review the committed diff
 
-Review the Vercel preview for user-facing changes. Address valid review
-comments in the feature branch, rerun local checks, and push the fixes. Merge
-only after required checks pass.
+Review the Vercel preview for user-facing changes. Start review inspection with
+`gh pr view --comments` and read the full output; CodeRabbit separates summary,
+inline, and nitpick findings. Use thread-aware tooling only when thread
+resolution state matters.
+
+Address valid comments in the feature branch, rerun local checks, and push the
+fixes. Merge only after required checks pass.
 
 After merging:
 
