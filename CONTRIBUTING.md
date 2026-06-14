@@ -60,8 +60,12 @@ critical vulnerabilities must be addressed before merging.
 git add <changed-files>
 git commit -m "Short description"
 git push -u origin HEAD
-gh pr create --draft --fill
+gh pr create --fill
 ```
+
+Use a regular pull request by default when the change is tested and ready for
+review. Use a draft pull request for larger, experimental, or multi-session
+work that benefits from early preview, CI, or review feedback.
 
 A pull request triggers:
 
