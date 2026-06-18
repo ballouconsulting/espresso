@@ -22,43 +22,50 @@ type BrewCalculationResponse = {
 
 type ShotCalculatorProps = {
   recipe: TargetRecipe;
-  onPreview: (recipe: TargetRecipe) => void;
   onCalculated: (recipe: TargetRecipe) => void;
 };
 
 export function ShotCalculator({
   recipe,
-  onPreview,
   onCalculated,
 }: ShotCalculatorProps) {
-  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [draftDose, setDraftDose] = useState(recipe.dose);
+  const [draftRatio, setDraftRatio] = useState(recipe.ratio);
+  const [syncedRecipe, setSyncedRecipe] = useState({
+    dose: recipe.dose,
+    ratio: recipe.ratio,
+  });
+  const [status, setStatus] = useState<"confirmed" | "loading" | "error">(
+    "confirmed",
+  );
   const [error, setError] = useState("");
-  const latestRecipe = useRef(recipe);
+  const latestDraft = useRef({ dose: recipe.dose, ratio: recipe.ratio });
   const lastSubmitted = useRef("");
   const latestRequestId = useRef(0);
 
   useEffect(() => {
-    latestRecipe.current = recipe;
-  }, [recipe]);
+    latestDraft.current = { dose: draftDose, ratio: draftRatio };
+  }, [draftDose, draftRatio]);
 
-  const previewRecipe = useCallback(
+  if (recipe.dose !== syncedRecipe.dose || recipe.ratio !== syncedRecipe.ratio) {
+    const nextDraft = { dose: recipe.dose, ratio: recipe.ratio };
+    setSyncedRecipe(nextDraft);
+    setDraftDose(recipe.dose);
+    setDraftRatio(recipe.ratio);
+  }
+
+  const updateDraft = useCallback(
     (dose: number, ratio: number) => {
-      const nextRecipe = {
-        dose,
-        ratio,
-        yieldGrams: dose * ratio,
-        ratioLabel: `1:${formatRatio(ratio)}`,
-      };
-
-      latestRecipe.current = nextRecipe;
-      onPreview(nextRecipe);
+      latestDraft.current = { dose, ratio };
+      setDraftDose(dose);
+      setDraftRatio(ratio);
     },
-    [onPreview],
+    [],
   );
 
   const calculateRecipe = useCallback(async () => {
-    const recipeToCalculate = latestRecipe.current;
-    const key = `${recipeToCalculate.dose}:${recipeToCalculate.ratio}`;
+    const draftToCalculate = latestDraft.current;
+    const key = `${draftToCalculate.dose}:${draftToCalculate.ratio}`;
     if (lastSubmitted.current === key && status !== "error") {
       return;
     }
@@ -73,8 +80,8 @@ export function ShotCalculator({
       const data = await fetchJson<BrewCalculationResponse>("/api/brew-calculator", {
         method: "POST",
         body: JSON.stringify({
-          dose: recipeToCalculate.dose,
-          ratio: recipeToCalculate.ratio,
+          dose: draftToCalculate.dose,
+          ratio: draftToCalculate.ratio,
           unit: "g",
           outputUnit: "g",
         }),
@@ -84,13 +91,21 @@ export function ShotCalculator({
         return;
       }
 
-      onCalculated({
+      const confirmedRecipe = {
         dose: data.calculation.dose,
         ratio: data.calculation.ratio,
         yieldGrams: data.calculation.yield,
         ratioLabel: data.calculation.ratioLabel,
-      });
-      setStatus("idle");
+      };
+
+      latestDraft.current = {
+        dose: confirmedRecipe.dose,
+        ratio: confirmedRecipe.ratio,
+      };
+      setDraftDose(confirmedRecipe.dose);
+      setDraftRatio(confirmedRecipe.ratio);
+      onCalculated(confirmedRecipe);
+      setStatus("confirmed");
     } catch (fetchError) {
       if (requestId !== latestRequestId.current) {
         return;
@@ -106,21 +121,30 @@ export function ShotCalculator({
       <div className="calculator-top">
         <span>Shot calculator</span>
         <span className={status === "loading" ? "live-dot loading" : "live-dot"}>
-          {status === "loading" ? "checking" : "ready"}
+          {status === "loading"
+            ? "checking"
+            : status === "error"
+              ? "error"
+              : "confirmed"}
         </span>
       </div>
       <label>
         <span>
-          Dose <strong>{recipe.dose.toFixed(1)}g</strong>
+          Dose <strong>{draftDose.toFixed(1)}g</strong>
         </span>
         <input
           type="range"
           min="14"
           max="22"
           step="0.5"
-          value={recipe.dose}
+          value={draftDose}
           onBlur={calculateRecipe}
-          onChange={(event) => previewRecipe(Number(event.currentTarget.value), recipe.ratio)}
+          onChange={(event) =>
+            updateDraft(
+              Number(event.currentTarget.value),
+              latestDraft.current.ratio,
+            )
+          }
           onKeyUp={calculateRecipe}
           onPointerUp={calculateRecipe}
         />
@@ -131,16 +155,21 @@ export function ShotCalculator({
       </label>
       <label>
         <span>
-          Brew ratio <strong>{recipe.ratioLabel}</strong>
+          Brew ratio <strong>1:{formatRatio(draftRatio)}</strong>
         </span>
         <input
           type="range"
           min="1.5"
           max="3"
           step="0.1"
-          value={recipe.ratio}
+          value={draftRatio}
           onBlur={calculateRecipe}
-          onChange={(event) => previewRecipe(recipe.dose, Number(event.currentTarget.value))}
+          onChange={(event) =>
+            updateDraft(
+              latestDraft.current.dose,
+              Number(event.currentTarget.value),
+            )
+          }
           onKeyUp={calculateRecipe}
           onPointerUp={calculateRecipe}
         />
@@ -150,12 +179,12 @@ export function ShotCalculator({
         </small>
       </label>
       <div className="yield-result">
-        <span>Stop your shot at</span>
+        <span>Confirmed target yield</span>
         <strong>
           {recipe.yieldGrams.toFixed(1)}
           <small>g</small>
         </strong>
-        <p>Release a slider to confirm the target with the brew API.</p>
+        <p>Release a slider to calculate the target with the brew API.</p>
       </div>
       {error ? <p className="tool-error">{error}</p> : null}
     </div>

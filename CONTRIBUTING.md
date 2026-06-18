@@ -21,11 +21,15 @@ Begin a new change from the latest `main`:
 ```bash
 git switch main
 git pull --ff-only
-git switch -c feature/short-description
+git switch -c <type>/<short-description>
 ```
 
-If you are already on the correct feature branch, continue there. Do not switch
-branches unnecessarily when uncommitted changes exist.
+Name branches for the change, not the tool. Use `feat/`, `fix/`, `chore/`,
+`docs/`, or `refactor/` with a short description. Do not use editor prefixes
+like `codex/` or `cursor/`; override an editor's default branch name if needed.
+
+If you are already on the correct branch, continue there. Do not switch branches
+unnecessarily when uncommitted changes exist.
 
 Keep changes focused. Prefer existing code patterns and avoid unrelated
 refactors.
@@ -89,7 +93,7 @@ After merging:
 ```bash
 git switch main
 git pull --ff-only
-git branch -d feature/short-description
+git branch -d <type>/<short-description>
 ```
 
 ## Research And Content

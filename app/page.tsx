@@ -214,7 +214,6 @@ export default function Home() {
 
           <ShotCalculator
             onCalculated={setTargetRecipe}
-            onPreview={setTargetRecipe}
             recipe={targetRecipe}
           />
         </div>
