@@ -55,6 +55,7 @@ export function DialInAdvisor({ targetRecipe }: DialInAdvisorProps) {
     event.preventDefault();
     setStatus("loading");
     setError("");
+    setResult(null);
 
     try {
       const data = await fetchJson<DialInResult>("/api/dial-in", {
@@ -70,6 +71,7 @@ export function DialInAdvisor({ targetRecipe }: DialInAdvisorProps) {
       setResult(data);
       setStatus("idle");
     } catch (fetchError) {
+      setResult(null);
       setError(getErrorMessage(fetchError));
       setStatus("error");
     }

@@ -61,6 +61,7 @@ export function TemperatureGuide() {
     event.preventDefault();
     setStatus("loading");
     setError("");
+    setResult(null);
 
     try {
       const data = await fetchJson<TemperatureGuidance>(
@@ -69,6 +70,7 @@ export function TemperatureGuide() {
       setResult(data);
       setStatus("idle");
     } catch (fetchError) {
+      setResult(null);
       setError(getErrorMessage(fetchError));
       setStatus("error");
     }

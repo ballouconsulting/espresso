@@ -35,6 +35,7 @@ export function ShotCalculator({
   const [error, setError] = useState("");
   const latestRecipe = useRef(recipe);
   const lastSubmitted = useRef("");
+  const latestRequestId = useRef(0);
 
   useEffect(() => {
     latestRecipe.current = recipe;
@@ -62,6 +63,8 @@ export function ShotCalculator({
       return;
     }
 
+    const requestId = latestRequestId.current + 1;
+    latestRequestId.current = requestId;
     lastSubmitted.current = key;
     setStatus("loading");
     setError("");
@@ -77,6 +80,10 @@ export function ShotCalculator({
         }),
       });
 
+      if (requestId !== latestRequestId.current) {
+        return;
+      }
+
       onCalculated({
         dose: data.calculation.dose,
         ratio: data.calculation.ratio,
@@ -85,6 +92,10 @@ export function ShotCalculator({
       });
       setStatus("idle");
     } catch (fetchError) {
+      if (requestId !== latestRequestId.current) {
+        return;
+      }
+
       setError(getErrorMessage(fetchError));
       setStatus("error");
     }

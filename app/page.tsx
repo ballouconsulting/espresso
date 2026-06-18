@@ -220,10 +220,7 @@ export default function Home() {
         </div>
       </section>
 
-      <DialInAdvisor
-        key={`${targetRecipe.dose}:${targetRecipe.yieldGrams}`}
-        targetRecipe={targetRecipe}
-      />
+      <DialInAdvisor targetRecipe={targetRecipe} />
 
       <TemperatureGuide />
 
