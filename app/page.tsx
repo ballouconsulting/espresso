@@ -1,6 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { DialInAdvisor } from "./components/DialInAdvisor.tsx";
+import {
+  ShotCalculator,
+  type TargetRecipe,
+} from "./components/ShotCalculator.tsx";
+import { TemperatureGuide } from "./components/TemperatureGuide.tsx";
 
 const steps = [
   {
@@ -51,11 +57,18 @@ const fixes = [
 ];
 
 export default function Home() {
-  const [dose, setDose] = useState(18);
-  const [ratio, setRatio] = useState(2);
+  const [targetRecipe, setTargetRecipe] = useState<TargetRecipe>({
+    dose: 18,
+    ratio: 2,
+    yieldGrams: 36,
+    ratioLabel: "1:2",
+  });
   const [checked, setChecked] = useState<number[]>([]);
 
-  const yieldWeight = useMemo(() => (dose * ratio).toFixed(1), [dose, ratio]);
+  const yieldWeight = useMemo(
+    () => targetRecipe.yieldGrams.toFixed(1),
+    [targetRecipe.yieldGrams],
+  );
 
   const toggleStep = (index: number) => {
     setChecked((current) =>
@@ -75,7 +88,8 @@ export default function Home() {
         <div className="nav-links">
           <a href="#method">Method</a>
           <a href="#dial-in">Dial in</a>
-          <a href="#troubleshoot">Fix a shot</a>
+          <a href="#advisor">Advisor</a>
+          <a href="#temperature">Temp</a>
         </div>
         <a className="nav-cta" href="#recipe">
           Quick recipe <Arrow />
@@ -107,7 +121,7 @@ export default function Home() {
         <div className="hero-art" aria-label="Illustration of espresso brewing">
           <div className="art-note note-one">
             <span>dose</span>
-            <strong>{dose.toFixed(1)}g</strong>
+            <strong>{targetRecipe.dose.toFixed(1)}g</strong>
           </div>
           <div className="art-note note-two">
             <span>yield</span>
@@ -142,7 +156,7 @@ export default function Home() {
         <div className="hero-stats">
           <div>
             <span>Start with</span>
-            <strong>1:2</strong>
+            <strong>{targetRecipe.ratioLabel}</strong>
             <small>brew ratio</small>
           </div>
           <div>
@@ -198,47 +212,20 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="calculator">
-            <div className="calculator-top">
-              <span>Shot calculator</span>
-              <span className="live-dot">live</span>
-            </div>
-            <label>
-              <span>
-                Dose <strong>{dose.toFixed(1)}g</strong>
-              </span>
-              <input
-                type="range"
-                min="14"
-                max="22"
-                step="0.5"
-                value={dose}
-                onInput={(event) => setDose(Number(event.currentTarget.value))}
-              />
-              <small><span>14g</span><span>22g</span></small>
-            </label>
-            <label>
-              <span>
-                Brew ratio <strong>1:{ratio.toFixed(1)}</strong>
-              </span>
-              <input
-                type="range"
-                min="1.5"
-                max="3"
-                step="0.1"
-                value={ratio}
-                onInput={(event) => setRatio(Number(event.currentTarget.value))}
-              />
-              <small><span>short</span><span>long</span></small>
-            </label>
-            <div className="yield-result">
-              <span>Stop your shot at</span>
-              <strong>{yieldWeight}<small>g</small></strong>
-              <p>Use 25–35 seconds as an initial diagnostic window.</p>
-            </div>
-          </div>
+          <ShotCalculator
+            onCalculated={setTargetRecipe}
+            onPreview={setTargetRecipe}
+            recipe={targetRecipe}
+          />
         </div>
       </section>
+
+      <DialInAdvisor
+        key={`${targetRecipe.dose}:${targetRecipe.yieldGrams}`}
+        targetRecipe={targetRecipe}
+      />
+
+      <TemperatureGuide />
 
       <section className="section shell" id="troubleshoot">
         <SectionHeading
@@ -269,8 +256,8 @@ export default function Home() {
           </div>
           <ol className="recipe-list">
             <li><span>01</span><p><strong>Warm everything</strong>Let the machine, portafilter, and cup get properly hot.</p></li>
-            <li><span>02</span><p><strong>Weigh 18.0g</strong>Grind fresh, distribute evenly, and tamp level.</p></li>
-            <li><span>03</span><p><strong>Pull 36g out</strong>Use 25–35 seconds as your initial reference window.</p></li>
+            <li><span>02</span><p><strong>Weigh {targetRecipe.dose.toFixed(1)}g</strong>Grind fresh, distribute evenly, and tamp level.</p></li>
+            <li><span>03</span><p><strong>Pull {yieldWeight}g out</strong>Use 25–35 seconds as your initial reference window.</p></li>
             <li><span>04</span><p><strong>Taste and log</strong>Adjust the grind first. Change only one variable.</p></li>
           </ol>
         </div>

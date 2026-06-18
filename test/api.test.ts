@@ -19,6 +19,7 @@ test("dial-in advisor prioritizes taste and returns concrete adjustments", () =>
   assert.equal(result.recipe.ratio, 2);
   assert.equal(result.assessment.extraction, "likely-under");
   assert.equal(result.assessment.pace, "fast");
+  assert.match(result.assessment.summary, /under-extracted/);
   assert.match(result.suggestions[0].adjustment, /Grind finer/);
 });
 

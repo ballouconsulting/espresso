@@ -139,7 +139,18 @@ function summaryFor(extraction: string, pace: string) {
   if (extraction === "unclear") {
     return "The shot time is in the usual diagnostic window, so taste it before adjusting.";
   }
-  return `The shot is ${extraction.replace("likely-", "likely ")} and ran ${pace}.`;
+  return `The shot is ${extractionLabel(extraction)} and ran ${paceLabel(pace)}.`;
+}
+
+function extractionLabel(extraction: string) {
+  return extraction.replace("likely-under", "likely under-extracted").replace(
+    "likely-over",
+    "likely over-extracted",
+  );
+}
+
+function paceLabel(pace: string) {
+  return pace === "in-range" ? "in range" : pace;
 }
 
 function round(value: number, places: number) {
