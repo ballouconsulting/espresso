@@ -34,7 +34,7 @@ type LangChainChunk = {
 };
 
 type ShotAnalysisClient = {
-  invoke(
+  invoke?(
     messages: Array<SystemMessage | HumanMessage>,
     options?: {
       runName?: string;
@@ -138,7 +138,7 @@ export async function createShotAnalysisStream(
   const messages = createShotAnalysisMessages(input);
   const model = modelFactory(input.model);
 
-  if (input.model.id === "ollama-nemotron-3-super") {
+  if (input.model.id === "ollama-nemotron-3-super" && model.invoke) {
     const response = await invokeShotAnalysis(model, messages, input, signal);
     return singleChunkStream(textFromChunk(response));
   }
@@ -189,7 +189,7 @@ async function invokeShotAnalysis(
   signal?: AbortSignal,
 ) {
   try {
-    return await model.invoke(messages, {
+    return await model.invoke!(messages, {
       runName: "espresso-shot-analysis",
       tags: ["dial-in-advisor", input.model.provider],
       metadata: {
