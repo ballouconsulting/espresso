@@ -40,6 +40,7 @@ type ShotAnalysisClient = {
       runName?: string;
       tags?: string[];
       metadata?: Record<string, string | number | boolean>;
+      signal?: AbortSignal;
     },
   ): Promise<AsyncIterable<unknown>> | AsyncIterable<unknown>;
 };
@@ -67,7 +68,7 @@ export async function handleShotAnalysisRequest(
   try {
     const body = await readJsonObject(request);
     const input = parseShotAnalysisInput(body);
-    const stream = await createShotAnalysisStream(input, modelFactory);
+    const stream = await createShotAnalysisStream(input, modelFactory, request.signal);
 
     return new Response(stream, {
       headers: {
@@ -123,6 +124,7 @@ export function createShotAnalysisMessages(input: ShotAnalysisInput) {
 export async function createShotAnalysisStream(
   input: ShotAnalysisInput,
   modelFactory: ShotAnalysisClientFactory = createShotAnalysisClient,
+  signal?: AbortSignal,
 ) {
   const messages = createShotAnalysisMessages(input);
   const model = modelFactory(input.model);
@@ -134,6 +136,7 @@ export async function createShotAnalysisStream(
       provider: input.model.provider,
       ratio: input.ratio,
     },
+    signal,
   });
   const iterator = langChainStream[Symbol.asyncIterator]();
   const firstChunk = await firstStreamChunk(iterator, input.model);
@@ -337,7 +340,7 @@ function formatShotForPrompt(input: ShotAnalysisInput) {
     input.brewTemperatureF
       ? `Brew temperature: ${input.brewTemperatureF} F`
       : "Brew temperature: not provided",
-    input.elevationFeet
+    input.elevationFeet !== undefined
       ? `Elevation: ${input.elevationFeet} ft`
       : "Elevation: not provided",
     input.notes ? `Notes: ${input.notes}` : "Notes: not provided",

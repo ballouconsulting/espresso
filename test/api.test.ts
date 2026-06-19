@@ -27,20 +27,22 @@ test("shot analysis accepts required measurements without optional context", () 
 });
 
 test("dial-in endpoint streams model analysis chunks", async () => {
+  const request = jsonRequest("http://localhost/api/dial-in", {
+    doseGrams: 18,
+    yieldGrams: 36,
+    timeSeconds: 22,
+    taste: "sour",
+    roastLevel: "light",
+    modelId: "ollama-gemma4-31b",
+  });
   const response = await handleShotAnalysisRequest(
-    jsonRequest("http://localhost/api/dial-in", {
-      doseGrams: 18,
-      yieldGrams: 36,
-      timeSeconds: 22,
-      taste: "sour",
-      roastLevel: "light",
-      modelId: "ollama-gemma4-31b",
-    }),
+    request,
     (model) => {
       assert.equal(model, shotAnalysisModels[0]);
 
       return {
-        async *stream() {
+        async *stream(_messages, options) {
+          assert.equal(options?.signal, request.signal);
           yield { content: "Snapshot: 1:2 in 22s.\n" };
           yield { content: [{ text: "Next shot: grind a touch finer." }] };
         },
