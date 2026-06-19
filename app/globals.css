@@ -228,23 +228,28 @@ h1 em, h2 em { color: var(--orange); font-weight: 500; }
   text-transform: uppercase;
 }
 .tool-card-top button:hover { background: var(--ink); color: var(--cream); }
+.model-field {
+  display: grid;
+  gap: 8px;
+  margin-top: 24px;
+}
 .field-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 14px;
   margin-top: 24px;
 }
-.field-grid label, .temperature-card label {
+.field-grid label, .model-field, .optional-grid label, .temperature-card label {
   display: grid;
   gap: 8px;
 }
-.field-grid label > span, .temperature-card label > span {
+.field-grid label > span, .model-field > span, .optional-grid label > span, .temperature-card label > span {
   font-size: 10px;
   font-weight: 800;
   letter-spacing: .13em;
   text-transform: uppercase;
 }
-.field-grid input, .temperature-card input {
+.field-grid input, .model-field select, .optional-grid input, .optional-grid select, .optional-grid textarea, .temperature-card input {
   width: 100%;
   border: 1px solid var(--ink);
   border-radius: 8px;
@@ -255,11 +260,24 @@ h1 em, h2 em { color: var(--orange); font-weight: 500; }
   min-width: 0;
   padding: 10px 12px;
 }
-.field-grid input:focus, .temperature-card input:focus {
+.model-field select, .optional-grid select {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  min-height: 54px;
+  text-transform: uppercase;
+}
+.optional-grid textarea {
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.field-grid input:focus, .model-field select:focus, .optional-grid input:focus, .optional-grid select:focus, .optional-grid textarea:focus, .temperature-card input:focus {
   outline: 2px solid var(--orange);
   outline-offset: 2px;
 }
-.field-grid small {
+.field-grid small, .optional-grid small {
   color: rgba(32,25,20,.68);
   font-size: 9px;
   letter-spacing: .1em;
@@ -298,6 +316,29 @@ h1 em, h2 em { color: var(--orange); font-weight: 500; }
   outline-offset: 2px;
 }
 .taste-picker label.selected, .taste-picker label:hover { background: var(--lime); }
+.optional-context {
+  border-top: 1px solid var(--line);
+  margin-top: 26px;
+  padding-top: 18px;
+}
+.optional-context summary {
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+.optional-context summary:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 4px;
+}
+.optional-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, 1fr);
+  margin-top: 18px;
+}
+.notes-field { grid-column: 1 / -1; }
 .tool-submit { width: 100%; margin-top: 26px; }
 .advisor-result {
   display: flex;
@@ -325,7 +366,7 @@ h1 em, h2 em { color: var(--orange); font-weight: 500; }
 .advisor-result p, .empty-result p { line-height: 1.6; margin: 0; }
 .result-metrics {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   border: 1px solid var(--ink);
   margin: 24px 0;
 }
@@ -342,7 +383,48 @@ h1 em, h2 em { color: var(--orange); font-weight: 500; }
   font-family: var(--font-serif), serif;
   font-size: 25px;
   letter-spacing: 0;
+  overflow-wrap: anywhere;
   text-transform: none;
+}
+.analysis-stream {
+  background: white;
+  border: 1px solid var(--ink);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 0;
+  min-height: 260px;
+  overflow-wrap: anywhere;
+  padding: 18px;
+  white-space: pre-wrap;
+}
+.stream-cursor {
+  align-items: center;
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 800;
+  gap: 8px;
+  letter-spacing: .13em;
+  margin-top: 14px;
+  text-transform: uppercase;
+}
+.stream-cursor::before, .spinner {
+  animation: spin .9s linear infinite;
+  border: 2px solid rgba(32,25,20,.22);
+  border-top-color: var(--orange);
+  border-radius: 50%;
+  content: "";
+  display: inline-block;
+  height: 16px;
+  width: 16px;
+}
+.spinner { margin-top: 22px; }
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stream-cursor::before, .spinner { animation: none; }
 }
 .suggestion-list {
   display: grid;
@@ -537,7 +619,7 @@ footer { background: var(--orange); color: white; padding-block: 25px; }
   .tool-section, .temperature-section { padding-block: 80px; }
   .tool-heading { margin-bottom: 30px; }
   .tool-card, .temperature-card { padding: 18px; }
-  .field-grid, .taste-picker, .temperature-details { grid-template-columns: 1fr; }
+  .field-grid, .taste-picker, .optional-grid, .temperature-details { grid-template-columns: 1fr; }
   .taste-picker label { justify-content: flex-start; padding-inline: 14px; }
   .result-metrics { grid-template-columns: 1fr; }
   .result-metrics span + span { border-left: 0; border-top: 1px solid var(--ink); }
