@@ -60,6 +60,37 @@ test("dial-in endpoint streams model analysis chunks", async () => {
   assert.equal(decoder.decode(second.value), "Next shot: grind a touch finer.");
 });
 
+test("dial-in endpoint uses invoke fallback for Nemotron analysis", async () => {
+  const request = jsonRequest("http://localhost/api/dial-in", {
+    doseGrams: 18,
+    yieldGrams: 36,
+    timeSeconds: 24,
+    modelId: "ollama-nemotron-3-super",
+  });
+
+  const response = await handleShotAnalysisRequest(
+    request,
+    (model) => {
+      assert.equal(model.id, "ollama-nemotron-3-super");
+
+      return {
+        async invoke(_messages, options) {
+          assert.equal(options?.signal, request.signal);
+          return { content: "Snapshot: 1:2 in 24s. Next shot: grind finer." };
+        },
+        async *stream() {
+          throw new Error("Nemotron should use invoke fallback.");
+        },
+      };
+    },
+  );
+
+  const text = await response.text();
+
+  assert.equal(response.status, 200);
+  assert.match(text, /Snapshot: 1:2 in 24s/);
+});
+
 test("dial-in endpoint returns readable provider errors before streaming", async () => {
   const response = await handleShotAnalysisRequest(
     jsonRequest("http://localhost/api/dial-in", {

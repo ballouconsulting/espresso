@@ -34,6 +34,15 @@ type LangChainChunk = {
 };
 
 type ShotAnalysisClient = {
+  invoke(
+    messages: Array<SystemMessage | HumanMessage>,
+    options?: {
+      runName?: string;
+      tags?: string[];
+      metadata?: Record<string, string | number | boolean>;
+      signal?: AbortSignal;
+    },
+  ): Promise<unknown>;
   stream(
     messages: Array<SystemMessage | HumanMessage>,
     options?: {
@@ -128,6 +137,12 @@ export async function createShotAnalysisStream(
 ) {
   const messages = createShotAnalysisMessages(input);
   const model = modelFactory(input.model);
+
+  if (input.model.id === "ollama-nemotron-3-super") {
+    const response = await invokeShotAnalysis(model, messages, input, signal);
+    return singleChunkStream(textFromChunk(response));
+  }
+
   const langChainStream = await model.stream(messages, {
     runName: "espresso-shot-analysis",
     tags: ["dial-in-advisor", input.model.provider],
@@ -167,6 +182,28 @@ export async function createShotAnalysisStream(
   });
 }
 
+async function invokeShotAnalysis(
+  model: ShotAnalysisClient,
+  messages: Array<SystemMessage | HumanMessage>,
+  input: ShotAnalysisInput,
+  signal?: AbortSignal,
+) {
+  try {
+    return await model.invoke(messages, {
+      runName: "espresso-shot-analysis",
+      tags: ["dial-in-advisor", input.model.provider],
+      metadata: {
+        modelId: input.model.id,
+        provider: input.model.provider,
+        ratio: input.ratio,
+      },
+      signal,
+    });
+  } catch (error) {
+    throw providerError(input.model, error);
+  }
+}
+
 async function firstStreamChunk(
   iterator: AsyncIterator<unknown>,
   model: ShotAnalysisModel,
@@ -188,6 +225,20 @@ function enqueueText(
   if (text) {
     controller.enqueue(encoder.encode(text));
   }
+}
+
+function singleChunkStream(text: string) {
+  const encoder = new TextEncoder();
+
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      if (text) {
+        controller.enqueue(encoder.encode(text));
+      }
+
+      controller.close();
+    },
+  });
 }
 
 function createShotAnalysisClient(model: ShotAnalysisModel): ShotAnalysisClient {
