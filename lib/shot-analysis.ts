@@ -211,8 +211,7 @@ function createShotAnalysisClient(model: ShotAnalysisModel): ShotAnalysisClient 
     model: model.model,
     numPredict: 420,
     temperature: 0.2,
-    // Nemotron defaults to extended thinking with empty `content` tokens unless disabled.
-    ...(model.id === "ollama-nemotron-3-super" ? { think: false } : {}),
+    ...(model.think ? { think: true } : {}),
   });
 }
 
@@ -360,44 +359,67 @@ export function textFromChunk(chunk: unknown) {
   }
 
   const record = chunk as Record<string, unknown>;
+  const contentText =
+    "content" in record ? visibleContentToText((record as LangChainChunk).content) : "";
+
+  if (contentText) {
+    return contentText;
+  }
+
+  if (reasoningTraceInChunk(record)) {
+    return "";
+  }
 
   if (typeof record.text === "string" && record.text) {
     return record.text;
   }
 
-  if ("content" in record) {
-    const contentText = contentToText((record as LangChainChunk).content);
-    if (contentText) {
-      return contentText;
-    }
-  }
+  return "";
+}
 
+function reasoningTraceInChunk(record: Record<string, unknown>) {
   const additionalKwargs = record.additional_kwargs;
   if (additionalKwargs && typeof additionalKwargs === "object") {
     const reasoning = (additionalKwargs as Record<string, unknown>).reasoning_content;
     if (typeof reasoning === "string" && reasoning) {
-      return reasoning;
+      return true;
     }
   }
 
-  return "";
+  const content = record.content;
+  if (!Array.isArray(content)) {
+    return false;
+  }
+
+  return content.some((part) => {
+    if (!part || typeof part !== "object") {
+      return false;
+    }
+
+    const block = part as Record<string, unknown>;
+    return block.type === "reasoning" || block.type === "reasoning-delta";
+  });
 }
 
 export function contentToText(content: unknown): string {
+  return visibleContentToText(content);
+}
+
+function visibleContentToText(content: unknown): string {
   if (typeof content === "string") {
     return content;
   }
 
   if (Array.isArray(content)) {
     return content
-      .map((part) => contentPartToText(part))
+      .map((part) => visibleContentPartToText(part))
       .join("");
   }
 
   return "";
 }
 
-function contentPartToText(part: unknown): string {
+function visibleContentPartToText(part: unknown): string {
   if (typeof part === "string") {
     return part;
   }
@@ -408,20 +430,20 @@ function contentPartToText(part: unknown): string {
 
   const block = part as Record<string, unknown>;
 
-  if (typeof block.text === "string") {
-    return block.text;
+  if (block.type === "reasoning" || block.type === "reasoning-delta") {
+    return "";
   }
 
-  if (typeof block.reasoning === "string") {
-    return block.reasoning;
+  if (typeof block.text === "string") {
+    return block.text;
   }
 
   if (block.type === "text-delta" && typeof block.text === "string") {
     return block.text;
   }
 
-  if (block.type === "reasoning-delta" && typeof block.reasoning === "string") {
-    return block.reasoning;
+  if (block.type === "text" && typeof block.text === "string") {
+    return block.text;
   }
 
   return "";
