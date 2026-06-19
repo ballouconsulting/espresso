@@ -17,7 +17,7 @@ export const shotAnalysisModels = [
     id: "ollama-nemotron-3-super",
     label: "Nemotron 3 Super",
     provider: "ollama",
-    model: "nemotron-3-super",
+    model: "nemotron-3-super:cloud",
   },
   {
     id: "openai-gpt-5-4-mini",

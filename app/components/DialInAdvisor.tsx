@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import {
   roastLevels,
   shotAnalysisModels,
@@ -30,10 +30,14 @@ const roastOptions: Array<{ value: RoastLevel | ""; label: string }> = [
 ];
 
 type DialInAdvisorProps = {
+  prefilledElevationFeet: number | null;
   targetRecipe: TargetRecipe;
 };
 
-export function DialInAdvisor({ targetRecipe }: DialInAdvisorProps) {
+export function DialInAdvisor({
+  prefilledElevationFeet,
+  targetRecipe,
+}: DialInAdvisorProps) {
   const [dose, setDose] = useState(targetRecipe.dose.toFixed(1));
   const [yieldGrams, setYieldGrams] = useState(targetRecipe.yieldGrams.toFixed(1));
   const [timeSeconds, setTimeSeconds] = useState("28");
@@ -51,6 +55,12 @@ export function DialInAdvisor({ targetRecipe }: DialInAdvisorProps) {
   } | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (prefilledElevationFeet !== null) {
+      setElevationFeet(String(prefilledElevationFeet));
+    }
+  }, [prefilledElevationFeet]);
 
   const submitShot = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -123,7 +133,7 @@ export function DialInAdvisor({ targetRecipe }: DialInAdvisorProps) {
       </div>
 
       <div className="advisor-grid">
-        <form className="tool-card advisor-form" onSubmit={submitShot}>
+        <form autoComplete="off" className="tool-card advisor-form" onSubmit={submitShot}>
           <div className="tool-card-top">
             <span>Shot log</span>
             <label className="top-model-field">
@@ -238,7 +248,7 @@ export function DialInAdvisor({ targetRecipe }: DialInAdvisorProps) {
                   min={-1500}
                   onChange={setElevationFeet}
                   placeholder="0"
-                  step={50}
+                  step={1}
                   value={elevationFeet}
                 />
                 <small>feet</small>
@@ -246,6 +256,7 @@ export function DialInAdvisor({ targetRecipe }: DialInAdvisorProps) {
               <label className="notes-field">
                 <span>Notes</span>
                 <textarea
+                  autoComplete="off"
                   maxLength={600}
                   onChange={(event) => setNotes(event.currentTarget.value)}
                   placeholder="Channeling, thin body, new beans, grinder setting..."
@@ -415,13 +426,14 @@ function NumericFieldControl({
   return (
     <div className="number-control">
       <input
+        autoComplete="off"
         inputMode={inputMode}
         max={max}
         min={min}
         onChange={(event) => onChange(event.currentTarget.value)}
         placeholder={placeholder}
         required={required}
-        step={step}
+        step="any"
         type="number"
         value={value}
       />
