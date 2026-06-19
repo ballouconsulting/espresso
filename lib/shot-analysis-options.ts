@@ -14,10 +14,10 @@ export const shotAnalysisModels = [
     model: "gemma4:31b",
   },
   {
-    id: "ollama-deepseek-v4-flash",
-    label: "DeepSeek V4 Flash",
+    id: "ollama-nemotron-3-super",
+    label: "Nemotron 3 Super",
     provider: "ollama",
-    model: "deepseek-v4-flash:cloud",
+    model: "nemotron-3-super",
   },
   {
     id: "openai-gpt-5-4-mini",

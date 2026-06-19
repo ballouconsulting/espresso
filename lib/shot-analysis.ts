@@ -135,17 +135,25 @@ export async function createShotAnalysisStream(
       ratio: input.ratio,
     },
   });
+  const iterator = langChainStream[Symbol.asyncIterator]();
+  const firstChunk = await firstStreamChunk(iterator, input.model);
   const encoder = new TextEncoder();
 
   return new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
-        for await (const chunk of langChainStream) {
-          const text = textFromChunk(chunk);
+        if (!firstChunk.done) {
+          enqueueText(controller, encoder, firstChunk.value);
+        }
 
-          if (text) {
-            controller.enqueue(encoder.encode(text));
+        while (true) {
+          const chunk = await iterator.next();
+
+          if (chunk.done) {
+            break;
           }
+
+          enqueueText(controller, encoder, chunk.value);
         }
 
         controller.close();
@@ -154,6 +162,29 @@ export async function createShotAnalysisStream(
       }
     },
   });
+}
+
+async function firstStreamChunk(
+  iterator: AsyncIterator<unknown>,
+  model: ShotAnalysisModel,
+) {
+  try {
+    return await iterator.next();
+  } catch (error) {
+    throw providerError(model, error);
+  }
+}
+
+function enqueueText(
+  controller: ReadableStreamDefaultController<Uint8Array>,
+  encoder: TextEncoder,
+  chunk: unknown,
+) {
+  const text = textFromChunk(chunk);
+
+  if (text) {
+    controller.enqueue(encoder.encode(text));
+  }
 }
 
 function createShotAnalysisClient(model: ShotAnalysisModel): ShotAnalysisClient {
@@ -199,6 +230,33 @@ function requiredEnv(name: string, provider: string) {
   }
 
   return value;
+}
+
+function providerError(model: ShotAnalysisModel, error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  const normalizedMessage = message.toLowerCase();
+
+  if (normalizedMessage.includes("requires a subscription")) {
+    return new ApiError(
+      502,
+      "model_unavailable",
+      `${model.label} requires access that is not enabled for this API key. Choose another model or update Ollama access.`,
+    );
+  }
+
+  if (normalizedMessage.includes("model") && normalizedMessage.includes("not found")) {
+    return new ApiError(
+      502,
+      "model_unavailable",
+      `${model.label} is not available from the selected provider.`,
+    );
+  }
+
+  return new ApiError(
+    502,
+    "model_unavailable",
+    `${model.label} could not complete the analysis. Try another model or retry later.`,
+  );
 }
 
 function modelFromBody(value: unknown) {

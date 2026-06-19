@@ -58,6 +58,27 @@ test("dial-in endpoint streams model analysis chunks", async () => {
   assert.equal(decoder.decode(second.value), "Next shot: grind a touch finer.");
 });
 
+test("dial-in endpoint returns readable provider errors before streaming", async () => {
+  const response = await handleShotAnalysisRequest(
+    jsonRequest("http://localhost/api/dial-in", {
+      doseGrams: 18,
+      yieldGrams: 36,
+      timeSeconds: 28,
+      modelId: "ollama-nemotron-3-super",
+    }),
+    () => ({
+      async *stream() {
+        throw new Error("this model requires a subscription, upgrade for access");
+      },
+    }),
+  );
+  const body = await response.json();
+
+  assert.equal(response.status, 502);
+  assert.equal(body.error.code, "model_unavailable");
+  assert.match(body.error.message, /requires access/);
+});
+
 test("dial-in endpoint validates required numeric fields", async () => {
   const response = await advise(
     jsonRequest("http://localhost/api/dial-in", {

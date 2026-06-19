@@ -24,6 +24,11 @@ const roastLabels: Record<RoastLevel, string> = {
   dark: "Dark",
 };
 
+const roastOptions: Array<{ value: RoastLevel | ""; label: string }> = [
+  { value: "", label: "Not sure" },
+  ...roastLevels.map((level) => ({ value: level, label: roastLabels[level] })),
+];
+
 type DialInAdvisorProps = {
   targetRecipe: TargetRecipe;
 };
@@ -123,63 +128,57 @@ export function DialInAdvisor({ targetRecipe }: DialInAdvisorProps) {
             <span>Shot log</span>
             <label className="top-model-field">
               <span>Model</span>
-              <select
-                onChange={(event) => setModelId(event.currentTarget.value as ShotAnalysisModelId)}
-                required
+              <CustomSelect
+                label="Model"
+                onChange={(value) => setModelId(value as ShotAnalysisModelId)}
+                options={shotAnalysisModels.map((model) => ({
+                  value: model.id,
+                  label: model.label,
+                }))}
                 value={modelId}
-              >
-                {shotAnalysisModels.map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {model.label}
-                  </option>
-                ))}
-              </select>
+              />
             </label>
           </div>
 
           <div className="field-grid">
-            <label>
-              <span>Dose in</span>
-              <input
-                inputMode="decimal"
-                min="5"
-                max="40"
-                onChange={(event) => setDose(event.currentTarget.value)}
-                step="0.1"
-                type="number"
-                value={dose}
-                required
-              />
-              <small>grams</small>
-            </label>
-            <label>
-              <span>Yield out</span>
-              <input
-                inputMode="decimal"
-                min="5"
-                max="150"
-                onChange={(event) => setYieldGrams(event.currentTarget.value)}
-                step="0.1"
-                type="number"
-                value={yieldGrams}
-                required
-              />
-              <small>grams</small>
-            </label>
-            <label>
-              <span>Time</span>
-              <input
-                inputMode="numeric"
-                min="1"
-                max="120"
-                onChange={(event) => setTimeSeconds(event.currentTarget.value)}
-                step="1"
-                type="number"
-                value={timeSeconds}
-                required
-              />
-              <small>seconds</small>
-            </label>
+            <NumericField
+              decimals={1}
+              fallback={targetRecipe.dose}
+              inputMode="decimal"
+              label="Dose in"
+              max={40}
+              min={5}
+              onChange={setDose}
+              required
+              step={0.1}
+              unit="grams"
+              value={dose}
+            />
+            <NumericField
+              decimals={1}
+              fallback={targetRecipe.yieldGrams}
+              inputMode="decimal"
+              label="Yield out"
+              max={150}
+              min={5}
+              onChange={setYieldGrams}
+              required
+              step={0.1}
+              unit="grams"
+              value={yieldGrams}
+            />
+            <NumericField
+              fallback={28}
+              inputMode="numeric"
+              label="Time"
+              max={120}
+              min={1}
+              onChange={setTimeSeconds}
+              required
+              step={1}
+              unit="seconds"
+              value={timeSeconds}
+            />
           </div>
 
           <fieldset className="taste-picker">
@@ -206,42 +205,40 @@ export function DialInAdvisor({ targetRecipe }: DialInAdvisorProps) {
             <div className="optional-grid">
               <label>
                 <span>Roast level</span>
-                <select
-                  onChange={(event) => setRoastLevel(event.currentTarget.value as RoastLevel | "")}
+                <CustomSelect
+                  label="Roast level"
+                  onChange={(value) => setRoastLevel(value as RoastLevel | "")}
+                  options={roastOptions}
                   value={roastLevel}
-                >
-                  <option value="">Not sure</option>
-                  {roastLevels.map((level) => (
-                    <option key={level} value={level}>
-                      {roastLabels[level]}
-                    </option>
-                  ))}
-                </select>
+                />
               </label>
               <label>
                 <span>Brew temp</span>
-                <input
+                <NumericFieldControl
+                  decimals={1}
+                  fallback={200}
                   inputMode="decimal"
-                  max="212"
-                  min="185"
-                  onChange={(event) => setBrewTemperatureF(event.currentTarget.value)}
+                  label="Brew temp"
+                  max={212}
+                  min={185}
+                  onChange={setBrewTemperatureF}
                   placeholder="200"
-                  step="0.5"
-                  type="number"
+                  step={0.5}
                   value={brewTemperatureF}
                 />
                 <small>Fahrenheit</small>
               </label>
               <label>
                 <span>Elevation</span>
-                <input
+                <NumericFieldControl
+                  fallback={0}
                   inputMode="numeric"
-                  max="20000"
-                  min="-1500"
-                  onChange={(event) => setElevationFeet(event.currentTarget.value)}
-                  placeholder="5280"
-                  step="50"
-                  type="number"
+                  label="Elevation"
+                  max={20000}
+                  min={-1500}
+                  onChange={setElevationFeet}
+                  placeholder="0"
+                  step={50}
                   value={elevationFeet}
                 />
                 <small>feet</small>
@@ -309,6 +306,137 @@ export function DialInAdvisor({ targetRecipe }: DialInAdvisorProps) {
   );
 }
 
+type SelectOption = {
+  value: string;
+  label: string;
+};
+
+type CustomSelectProps = {
+  label: string;
+  onChange: (value: string) => void;
+  options: SelectOption[];
+  value: string;
+};
+
+function CustomSelect({ label, onChange, options, value }: CustomSelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selected = options.find((option) => option.value === value) ?? options[0];
+
+  return (
+    <div
+      className={`custom-select ${isOpen ? "open" : ""}`}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          setIsOpen(false);
+        }
+      }}
+    >
+      <button
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        className="select-trigger"
+        onClick={() => setIsOpen((current) => !current)}
+        type="button"
+      >
+        <span>{selected.label}</span>
+        <span aria-hidden="true">⌄</span>
+      </button>
+      {isOpen ? (
+        <div aria-label={label} className="select-menu" role="listbox">
+          {options.map((option) => (
+            <button
+              aria-selected={option.value === value}
+              className={option.value === value ? "selected" : ""}
+              key={option.value}
+              onClick={() => {
+                onChange(option.value);
+                setIsOpen(false);
+              }}
+              role="option"
+              type="button"
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+type NumericFieldProps = {
+  label: string;
+  max: number;
+  min: number;
+  onChange: (value: string) => void;
+  step: number;
+  unit: string;
+  value: string;
+  decimals?: number;
+  fallback?: number;
+  inputMode?: "decimal" | "numeric";
+  placeholder?: string;
+  required?: boolean;
+};
+
+function NumericField({ label, unit, ...controlProps }: NumericFieldProps) {
+  return (
+    <label>
+      <span>{label}</span>
+      <NumericFieldControl label={label} {...controlProps} />
+      <small>{unit}</small>
+    </label>
+  );
+}
+
+type NumericFieldControlProps = Omit<NumericFieldProps, "unit">;
+
+function NumericFieldControl({
+  decimals = 0,
+  fallback,
+  inputMode,
+  label,
+  max,
+  min,
+  onChange,
+  placeholder,
+  required,
+  step,
+  value,
+}: NumericFieldControlProps) {
+  const adjust = (direction: -1 | 1) => {
+    const parsed = Number(value);
+    const base = Number.isFinite(parsed) ? parsed : (fallback ?? min);
+    const next = Math.min(max, Math.max(min, base + step * direction));
+
+    onChange(formatNumber(next, decimals));
+  };
+
+  return (
+    <div className="number-control">
+      <input
+        inputMode={inputMode}
+        max={max}
+        min={min}
+        onChange={(event) => onChange(event.currentTarget.value)}
+        placeholder={placeholder}
+        required={required}
+        step={step}
+        type="number"
+        value={value}
+      />
+      <div className="number-stepper">
+        <button aria-label={`Decrease ${label}`} onClick={() => adjust(-1)} type="button">
+          −
+        </button>
+        <button aria-label={`Increase ${label}`} onClick={() => adjust(1)} type="button">
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
 async function streamAnalysis(
   body: ReadableStream<Uint8Array>,
   onChunk: (analysis: string) => void,
@@ -356,4 +484,8 @@ function ratioLabel(doseGrams: number, yieldGrams: number) {
   }
 
   return `1:${(yieldGrams / doseGrams).toFixed(2)}`;
+}
+
+function formatNumber(value: number, decimals: number) {
+  return decimals > 0 ? value.toFixed(decimals) : String(Math.round(value));
 }

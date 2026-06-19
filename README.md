@@ -112,7 +112,7 @@ curl -X POST http://localhost:3000/api/dial-in \
   -d '{"doseGrams":18,"yieldGrams":36,"timeSeconds":22,"taste":"sour","modelId":"ollama-gemma4-31b"}'
 ```
 
-Supported model IDs are `ollama-gemma4-31b`, `ollama-deepseek-v4-flash`, and
+Supported model IDs are `ollama-gemma4-31b`, `ollama-nemotron-3-super`, and
 `openai-gpt-5-4-mini`. The server route reads provider keys from environment
 variables so API keys never ship to the browser.
 
