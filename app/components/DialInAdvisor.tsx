@@ -49,6 +49,8 @@ export function DialInAdvisor({
   const [notes, setNotes] = useState("");
   const [modelId, setModelId] = useState<ShotAnalysisModelId>(shotAnalysisModels[0].id);
   const [analysis, setAnalysis] = useState("");
+  const [thinkingTrace, setThinkingTrace] = useState("");
+  const [thinkingExpanded, setThinkingExpanded] = useState(true);
   const [lastShot, setLastShot] = useState<{
     modelLabel: string;
     ratio: string;
@@ -62,6 +64,8 @@ export function DialInAdvisor({
     setStatus("loading");
     setError("");
     setAnalysis("");
+    setThinkingTrace("");
+    setThinkingExpanded(true);
 
     const selectedModel =
       shotAnalysisModels.find((model) => model.id === modelId) ?? shotAnalysisModels[0];
@@ -97,10 +101,18 @@ export function DialInAdvisor({
         throw new Error("The analysis response could not be opened.");
       }
 
-      await streamAnalysis(response.body, setAnalysis);
+      await streamDialInResponse(response.body, ({ analysis, thinking, thinkingComplete }) => {
+        setThinkingTrace(thinking);
+        setAnalysis(analysis);
+
+        if (thinkingComplete && thinking) {
+          setThinkingExpanded(false);
+        }
+      });
       setStatus("idle");
     } catch (fetchError) {
       setAnalysis("");
+      setThinkingTrace("");
       setError(
         fetchError instanceof Error
           ? fetchError.message
@@ -269,7 +281,7 @@ export function DialInAdvisor({
         </form>
 
         <div className={`tool-card advisor-result ${status === "loading" ? "streaming" : ""}`} aria-live="polite">
-          {analysis ? (
+          {analysis || thinkingTrace || status === "loading" ? (
             <>
               <div>
                 <span className="result-kicker">AI analysis</span>
@@ -288,7 +300,21 @@ export function DialInAdvisor({
                   </span>
                 </div>
               ) : null}
-              <pre className="analysis-stream">{analysis}</pre>
+              {thinkingTrace ? (
+                <details
+                  className={`thinking-panel ${thinkingExpanded ? "expanded" : "collapsed"}`}
+                  onToggle={(event) => setThinkingExpanded(event.currentTarget.open)}
+                  open={thinkingExpanded}
+                >
+                  <summary>Model thinking</summary>
+                  <pre className="thinking-stream">{thinkingTrace}</pre>
+                </details>
+              ) : null}
+              {analysis ? (
+                <pre className="analysis-stream">{analysis}</pre>
+              ) : status === "loading" ? (
+                <p className="analysis-pending">Drafting the answer after model thinking.</p>
+              ) : null}
               {status === "loading" ? <span className="stream-cursor">Analyzing</span> : null}
             </>
           ) : (
@@ -444,13 +470,20 @@ function NumericFieldControl({
   );
 }
 
-async function streamAnalysis(
+async function streamDialInResponse(
   body: ReadableStream<Uint8Array>,
-  onChunk: (analysis: string) => void,
+  onUpdate: (state: {
+    analysis: string;
+    thinking: string;
+    thinkingComplete: boolean;
+  }) => void,
 ) {
   const reader = body.getReader();
   const decoder = new TextDecoder();
-  let text = "";
+  let buffer = "";
+  let analysis = "";
+  let thinking = "";
+  let thinkingComplete = false;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -458,14 +491,59 @@ async function streamAnalysis(
     if (done) {
       const finalText = decoder.decode();
       if (finalText) {
-        text += finalText;
-        onChunk(text);
+        buffer += finalText;
       }
-      return;
+      break;
     }
 
-    text += decoder.decode(value, { stream: true });
-    onChunk(text);
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+
+    for (const line of lines) {
+      if (!line.trim()) {
+        continue;
+      }
+
+      const event = JSON.parse(line) as {
+        type: string;
+        delta?: string;
+      };
+
+      if (event.type === "thinking" && event.delta) {
+        thinking += event.delta;
+      }
+
+      if (event.type === "thinking_complete") {
+        thinkingComplete = true;
+      }
+
+      if (event.type === "answer" && event.delta) {
+        thinkingComplete = true;
+        analysis += event.delta;
+      }
+    }
+
+    onUpdate({ analysis, thinking, thinkingComplete });
+  }
+
+  if (buffer.trim()) {
+    const event = JSON.parse(buffer) as { type: string; delta?: string };
+
+    if (event.type === "thinking" && event.delta) {
+      thinking += event.delta;
+    }
+
+    if (event.type === "thinking_complete") {
+      thinkingComplete = true;
+    }
+
+    if (event.type === "answer" && event.delta) {
+      thinkingComplete = true;
+      analysis += event.delta;
+    }
+
+    onUpdate({ analysis, thinking, thinkingComplete });
   }
 }
 

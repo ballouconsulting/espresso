@@ -86,7 +86,7 @@ Dependencies are pinned in `package.json` and fully resolved in
 
 ## API
 
-Most endpoints return JSON. The shot analysis endpoint streams `text/plain`.
+Most endpoints return JSON. The shot analysis endpoint streams newline-delimited JSON (`application/x-ndjson`) with `thinking`, `thinking_complete`, and `answer` events.
 Invalid requests use this JSON error shape:
 
 ```json
