@@ -63,6 +63,7 @@ export default function Home() {
     yieldGrams: 36,
     ratioLabel: "1:2",
   });
+  const [zipElevationFeet, setZipElevationFeet] = useState<number | null>(null);
   const [checked, setChecked] = useState<number[]>([]);
 
   const yieldWeight = useMemo(
@@ -219,9 +220,12 @@ export default function Home() {
         </div>
       </section>
 
-      <DialInAdvisor targetRecipe={targetRecipe} />
+      <DialInAdvisor
+        prefilledElevationFeet={zipElevationFeet}
+        targetRecipe={targetRecipe}
+      />
 
-      <TemperatureGuide />
+      <TemperatureGuide onElevationResolved={setZipElevationFeet} />
 
       <section className="section shell" id="troubleshoot">
         <SectionHeading
