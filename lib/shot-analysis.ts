@@ -34,15 +34,6 @@ type LangChainChunk = {
 };
 
 type ShotAnalysisClient = {
-  invoke?(
-    messages: Array<SystemMessage | HumanMessage>,
-    options?: {
-      runName?: string;
-      tags?: string[];
-      metadata?: Record<string, string | number | boolean>;
-      signal?: AbortSignal;
-    },
-  ): Promise<unknown>;
   stream(
     messages: Array<SystemMessage | HumanMessage>,
     options?: {
@@ -138,11 +129,6 @@ export async function createShotAnalysisStream(
   const messages = createShotAnalysisMessages(input);
   const model = modelFactory(input.model);
 
-  if (input.model.id === "ollama-nemotron-3-super" && model.invoke) {
-    const response = await invokeShotAnalysis(model, messages, input, signal);
-    return singleChunkStream(textFromChunk(response));
-  }
-
   const langChainStream = await model.stream(messages, {
     runName: "espresso-shot-analysis",
     tags: ["dial-in-advisor", input.model.provider],
@@ -182,28 +168,6 @@ export async function createShotAnalysisStream(
   });
 }
 
-async function invokeShotAnalysis(
-  model: ShotAnalysisClient,
-  messages: Array<SystemMessage | HumanMessage>,
-  input: ShotAnalysisInput,
-  signal?: AbortSignal,
-) {
-  try {
-    return await model.invoke!(messages, {
-      runName: "espresso-shot-analysis",
-      tags: ["dial-in-advisor", input.model.provider],
-      metadata: {
-        modelId: input.model.id,
-        provider: input.model.provider,
-        ratio: input.ratio,
-      },
-      signal,
-    });
-  } catch (error) {
-    throw providerError(input.model, error);
-  }
-}
-
 async function firstStreamChunk(
   iterator: AsyncIterator<unknown>,
   model: ShotAnalysisModel,
@@ -227,20 +191,6 @@ function enqueueText(
   }
 }
 
-function singleChunkStream(text: string) {
-  const encoder = new TextEncoder();
-
-  return new ReadableStream<Uint8Array>({
-    start(controller) {
-      if (text) {
-        controller.enqueue(encoder.encode(text));
-      }
-
-      controller.close();
-    },
-  });
-}
-
 function createShotAnalysisClient(model: ShotAnalysisModel): ShotAnalysisClient {
   enableLangSmithTracing();
 
@@ -261,6 +211,8 @@ function createShotAnalysisClient(model: ShotAnalysisModel): ShotAnalysisClient 
     model: model.model,
     numPredict: 420,
     temperature: 0.2,
+    // Nemotron defaults to extended thinking with empty `content` tokens unless disabled.
+    ...(model.id === "ollama-nemotron-3-super" ? { think: false } : {}),
   });
 }
 
@@ -398,38 +350,78 @@ function formatShotForPrompt(input: ShotAnalysisInput) {
   ].join("\n");
 }
 
-function textFromChunk(chunk: unknown) {
+export function textFromChunk(chunk: unknown) {
   if (typeof chunk === "string") {
     return chunk;
   }
 
-  if (chunk && typeof chunk === "object" && "content" in chunk) {
-    return contentToText((chunk as LangChainChunk).content);
+  if (!chunk || typeof chunk !== "object") {
+    return "";
+  }
+
+  const record = chunk as Record<string, unknown>;
+
+  if (typeof record.text === "string" && record.text) {
+    return record.text;
+  }
+
+  if ("content" in record) {
+    const contentText = contentToText((record as LangChainChunk).content);
+    if (contentText) {
+      return contentText;
+    }
+  }
+
+  const additionalKwargs = record.additional_kwargs;
+  if (additionalKwargs && typeof additionalKwargs === "object") {
+    const reasoning = (additionalKwargs as Record<string, unknown>).reasoning_content;
+    if (typeof reasoning === "string" && reasoning) {
+      return reasoning;
+    }
   }
 
   return "";
 }
 
-function contentToText(content: unknown): string {
+export function contentToText(content: unknown): string {
   if (typeof content === "string") {
     return content;
   }
 
   if (Array.isArray(content)) {
     return content
-      .map((part) => {
-        if (typeof part === "string") {
-          return part;
-        }
-
-        if (part && typeof part === "object" && "text" in part) {
-          const text = (part as { text: unknown }).text;
-          return typeof text === "string" ? text : "";
-        }
-
-        return "";
-      })
+      .map((part) => contentPartToText(part))
       .join("");
+  }
+
+  return "";
+}
+
+function contentPartToText(part: unknown): string {
+  if (typeof part === "string") {
+    return part;
+  }
+
+  if (!part || typeof part !== "object") {
+    return "";
+  }
+
+  const block = part as Record<string, unknown>;
+
+  if (typeof block.text === "string") {
+    return block.text;
+  }
+
+  if (typeof block.reasoning === "string") {
+    return block.reasoning;
+  }
+
+  if (block.type === "text-delta" && typeof block.text === "string") {
+    return block.text;
+  }
+
+  if (block.type === "reasoning-delta" && typeof block.reasoning === "string") {
+    return block.reasoning;
   }
 
   return "";

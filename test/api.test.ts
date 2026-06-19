@@ -8,6 +8,7 @@ import { temperatureForZip, temperatureGuidance } from "../lib/brew-temperature.
 import {
   handleShotAnalysisRequest,
   parseShotAnalysisInput,
+  textFromChunk,
 } from "../lib/shot-analysis.ts";
 import { shotAnalysisModels } from "../lib/shot-analysis-options.ts";
 import { ApiError } from "../lib/api.ts";
@@ -60,7 +61,24 @@ test("dial-in endpoint streams model analysis chunks", async () => {
   assert.equal(decoder.decode(second.value), "Next shot: grind a touch finer.");
 });
 
-test("dial-in endpoint uses invoke fallback for Nemotron analysis", async () => {
+test("textFromChunk reads Ollama thinking deltas when content is empty", () => {
+  assert.equal(
+    textFromChunk({
+      content: "",
+      additional_kwargs: { reasoning_content: "Snapshot: 1:2 in 24s." },
+    }),
+    "Snapshot: 1:2 in 24s.",
+  );
+  assert.equal(
+    textFromChunk({
+      text: "Next shot: grind finer.",
+      content: "",
+    }),
+    "Next shot: grind finer.",
+  );
+});
+
+test("dial-in endpoint streams Nemotron-style thinking chunks", async () => {
   const request = jsonRequest("http://localhost/api/dial-in", {
     doseGrams: 18,
     yieldGrams: 36,
@@ -74,12 +92,13 @@ test("dial-in endpoint uses invoke fallback for Nemotron analysis", async () => 
       assert.equal(model.id, "ollama-nemotron-3-super");
 
       return {
-        async invoke(_messages, options) {
+        async *stream(_messages, options) {
           assert.equal(options?.signal, request.signal);
-          return { content: "Snapshot: 1:2 in 24s. Next shot: grind finer." };
-        },
-        async *stream() {
-          throw new Error("Nemotron should use invoke fallback.");
+          yield {
+            content: "",
+            additional_kwargs: { reasoning_content: "Snapshot: 1:2 in 24s.\n" },
+          };
+          yield { content: "Next shot: grind a touch finer." };
         },
       };
     },
@@ -89,6 +108,7 @@ test("dial-in endpoint uses invoke fallback for Nemotron analysis", async () => 
 
   assert.equal(response.status, 200);
   assert.match(text, /Snapshot: 1:2 in 24s/);
+  assert.match(text, /grind a touch finer/);
 });
 
 test("dial-in endpoint returns readable provider errors before streaming", async () => {
