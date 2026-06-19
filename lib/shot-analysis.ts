@@ -146,18 +146,28 @@ export async function createShotAnalysisStream(
   return new ReadableStream<Uint8Array>({
     async start(controller) {
       let thinkingCompleteSent = false;
+      let sawThinking = false;
+
+      const onAnswerStart = () => {
+        if (thinkingCompleteSent) {
+          return;
+        }
+
+        thinkingCompleteSent = true;
+
+        if (sawThinking) {
+          controller.enqueue(
+            encoder.encode(encodeShotAnalysisStreamEvent({ type: "thinking_complete" })),
+          );
+        }
+      };
 
       try {
         if (!firstChunk.done) {
-          enqueueStreamChunk(controller, encoder, firstChunk.value, () => {
-            if (thinkingCompleteSent) {
-              return;
+          enqueueStreamChunk(controller, encoder, firstChunk.value, onAnswerStart, (thinking) => {
+            if (thinking) {
+              sawThinking = true;
             }
-
-            thinkingCompleteSent = true;
-            controller.enqueue(
-              encoder.encode(encodeShotAnalysisStreamEvent({ type: "thinking_complete" })),
-            );
           });
         }
 
@@ -168,15 +178,10 @@ export async function createShotAnalysisStream(
             break;
           }
 
-          enqueueStreamChunk(controller, encoder, chunk.value, () => {
-            if (thinkingCompleteSent) {
-              return;
+          enqueueStreamChunk(controller, encoder, chunk.value, onAnswerStart, (thinking) => {
+            if (thinking) {
+              sawThinking = true;
             }
-
-            thinkingCompleteSent = true;
-            controller.enqueue(
-              encoder.encode(encodeShotAnalysisStreamEvent({ type: "thinking_complete" })),
-            );
           });
         }
 
@@ -204,10 +209,12 @@ function enqueueStreamChunk(
   encoder: TextEncoder,
   chunk: unknown,
   onAnswerStart: () => void,
+  onThinking?: (thinking: string) => void,
 ) {
   const parts = streamPartsFromChunk(chunk);
 
   if (parts.thinking) {
+    onThinking?.(parts.thinking);
     controller.enqueue(
       encoder.encode(
         encodeShotAnalysisStreamEvent({ type: "thinking", delta: parts.thinking }),

@@ -94,7 +94,7 @@ test("dial-in endpoint streams model analysis chunks", async () => {
   assert.match(response.headers.get("Content-Type") ?? "", /application\/x-ndjson/);
   assert.deepEqual(
     events.map((event) => event.type),
-    ["answer", "thinking_complete", "answer"],
+    ["answer", "answer"],
   );
   assert.equal(
     events
