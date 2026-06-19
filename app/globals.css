@@ -215,23 +215,28 @@ h1 em, h2 em { color: var(--orange); font-weight: 500; }
   font-size: 10px;
   font-weight: 800;
 }
-.tool-card-top button {
+.top-model-field {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+.top-model-field select {
   border: 1px solid var(--ink);
   border-radius: 999px;
-  background: transparent;
+  background: white;
   color: inherit;
-  cursor: pointer;
-  font-size: 9px;
+  font: inherit;
+  font-size: 10px;
   font-weight: 800;
-  letter-spacing: .12em;
-  padding: 8px 12px;
+  letter-spacing: .08em;
+  max-width: 210px;
+  min-height: 34px;
+  padding: 7px 28px 7px 12px;
   text-transform: uppercase;
 }
-.tool-card-top button:hover { background: var(--ink); color: var(--cream); }
-.model-field {
-  display: grid;
-  gap: 8px;
-  margin-top: 24px;
+.top-model-field select:focus {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
 }
 .field-grid {
   display: grid;
@@ -239,41 +244,44 @@ h1 em, h2 em { color: var(--orange); font-weight: 500; }
   gap: 14px;
   margin-top: 24px;
 }
-.field-grid label, .model-field, .optional-grid label, .temperature-card label {
+.field-grid label, .optional-grid label, .temperature-card label {
   display: grid;
   gap: 8px;
 }
-.field-grid label > span, .model-field > span, .optional-grid label > span, .temperature-card label > span {
+.field-grid label > span, .optional-heading span, .optional-grid label > span, .temperature-card label > span {
   font-size: 10px;
   font-weight: 800;
   letter-spacing: .13em;
   text-transform: uppercase;
 }
-.field-grid input, .model-field select, .optional-grid input, .optional-grid select, .optional-grid textarea, .temperature-card input {
+.field-grid input, .optional-grid input, .optional-grid select, .optional-grid textarea, .temperature-card input {
   width: 100%;
   border: 1px solid var(--ink);
   border-radius: 8px;
   background: white;
   color: var(--ink);
   font-family: var(--font-serif), serif;
-  font-size: 32px;
+  font-size: 24px;
+  line-height: 1.15;
   min-width: 0;
-  padding: 10px 12px;
+  min-height: 46px;
+  padding: 8px 10px;
 }
-.model-field select, .optional-grid select {
+.optional-grid select {
   font-family: inherit;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 800;
-  min-height: 54px;
+  min-height: 46px;
   text-transform: uppercase;
 }
 .optional-grid textarea {
   font-family: inherit;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.5;
+  min-height: 86px;
   resize: vertical;
 }
-.field-grid input:focus, .model-field select:focus, .optional-grid input:focus, .optional-grid select:focus, .optional-grid textarea:focus, .temperature-card input:focus {
+.field-grid input:focus, .optional-grid input:focus, .optional-grid select:focus, .optional-grid textarea:focus, .temperature-card input:focus {
   outline: 2px solid var(--orange);
   outline-offset: 2px;
 }
@@ -318,28 +326,30 @@ h1 em, h2 em { color: var(--orange); font-weight: 500; }
 .taste-picker label.selected, .taste-picker label:hover { background: var(--lime); }
 .optional-context {
   border-top: 1px solid var(--line);
-  margin-top: 26px;
-  padding-top: 18px;
+  margin-top: 22px;
+  padding-top: 16px;
 }
-.optional-context summary {
-  cursor: pointer;
-  font-size: 10px;
+.optional-heading {
+  align-items: baseline;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+.optional-heading small {
+  color: rgba(32,25,20,.58);
+  font-size: 9px;
   font-weight: 800;
-  letter-spacing: .13em;
+  letter-spacing: .1em;
   text-transform: uppercase;
-}
-.optional-context summary:focus-visible {
-  outline: 2px solid var(--orange);
-  outline-offset: 4px;
 }
 .optional-grid {
   display: grid;
   gap: 14px;
   grid-template-columns: repeat(2, 1fr);
-  margin-top: 18px;
+  margin-top: 14px;
 }
 .notes-field { grid-column: 1 / -1; }
-.tool-submit { width: 100%; margin-top: 26px; }
+.tool-submit { width: 100%; margin-top: 22px; }
 .advisor-result {
   display: flex;
   flex-direction: column;
@@ -619,6 +629,9 @@ footer { background: var(--orange); color: white; padding-block: 25px; }
   .tool-section, .temperature-section { padding-block: 80px; }
   .tool-heading { margin-bottom: 30px; }
   .tool-card, .temperature-card { padding: 18px; }
+  .tool-card-top { align-items: flex-start; flex-direction: column; }
+  .top-model-field { align-items: flex-start; flex-direction: column; width: 100%; }
+  .top-model-field select { max-width: none; width: 100%; }
   .field-grid, .taste-picker, .optional-grid, .temperature-details { grid-template-columns: 1fr; }
   .taste-picker label { justify-content: flex-start; padding-inline: 14px; }
   .result-metrics { grid-template-columns: 1fr; }

@@ -47,11 +47,6 @@ export function DialInAdvisor({ targetRecipe }: DialInAdvisorProps) {
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState("");
 
-  const useTargetRecipe = () => {
-    setDose(targetRecipe.dose.toFixed(1));
-    setYieldGrams(targetRecipe.yieldGrams.toFixed(1));
-  };
-
   const submitShot = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setStatus("loading");
@@ -89,7 +84,7 @@ export function DialInAdvisor({ targetRecipe }: DialInAdvisorProps) {
       }
 
       if (!response.body) {
-        throw new Error("The analysis stream could not be opened.");
+        throw new Error("The analysis response could not be opened.");
       }
 
       await streamAnalysis(response.body, setAnalysis);
@@ -113,12 +108,12 @@ export function DialInAdvisor({ targetRecipe }: DialInAdvisorProps) {
           <h2>
             Analyze the shot.
             <br />
-            <em>Watch the plan stream in.</em>
+            <em>Choose the next move.</em>
           </h2>
         </div>
         <p>
-          Enter the shot data you know. The selected model reads the recipe,
-          taste, and context once, then streams a concise next-shot plan.
+          Enter the shot data you know. The selected model uses the recipe,
+          taste, and context once, then returns a concise next-shot plan.
         </p>
       </div>
 
@@ -126,25 +121,21 @@ export function DialInAdvisor({ targetRecipe }: DialInAdvisorProps) {
         <form className="tool-card advisor-form" onSubmit={submitShot}>
           <div className="tool-card-top">
             <span>Shot log</span>
-            <button type="button" onClick={useTargetRecipe}>
-              Use target
-            </button>
+            <label className="top-model-field">
+              <span>Model</span>
+              <select
+                onChange={(event) => setModelId(event.currentTarget.value as ShotAnalysisModelId)}
+                required
+                value={modelId}
+              >
+                {shotAnalysisModels.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.label}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
-
-          <label className="model-field">
-            <span>Analysis model</span>
-            <select
-              onChange={(event) => setModelId(event.currentTarget.value as ShotAnalysisModelId)}
-              required
-              value={modelId}
-            >
-              {shotAnalysisModels.map((model) => (
-                <option key={model.id} value={model.id}>
-                  {model.label}
-                </option>
-              ))}
-            </select>
-          </label>
 
           <div className="field-grid">
             <label>
@@ -207,8 +198,11 @@ export function DialInAdvisor({ targetRecipe }: DialInAdvisorProps) {
             ))}
           </fieldset>
 
-          <details className="optional-context">
-            <summary>Optional context</summary>
+          <div className="optional-context">
+            <div className="optional-heading">
+              <span>Optional context</span>
+              <small>Use what you know</small>
+            </div>
             <div className="optional-grid">
               <label>
                 <span>Roast level</span>
@@ -258,15 +252,15 @@ export function DialInAdvisor({ targetRecipe }: DialInAdvisorProps) {
                   maxLength={600}
                   onChange={(event) => setNotes(event.currentTarget.value)}
                   placeholder="Channeling, thin body, new beans, grinder setting..."
-                  rows={4}
+                  rows={3}
                   value={notes}
                 />
               </label>
             </div>
-          </details>
+          </div>
 
           <button className="button primary tool-submit" disabled={status === "loading"} type="submit">
-            {status === "loading" ? "Analyzing shot" : "Stream shot analysis"}
+            {status === "loading" ? "Analyzing shot" : "Analyze shot"}
           </button>
           {error ? <p className="tool-error">{error}</p> : null}
         </form>
@@ -292,7 +286,7 @@ export function DialInAdvisor({ targetRecipe }: DialInAdvisorProps) {
                 </div>
               ) : null}
               <pre className="analysis-stream">{analysis}</pre>
-              {status === "loading" ? <span className="stream-cursor">Streaming</span> : null}
+              {status === "loading" ? <span className="stream-cursor">Analyzing</span> : null}
             </>
           ) : (
             <div className="empty-result">
@@ -300,7 +294,7 @@ export function DialInAdvisor({ targetRecipe }: DialInAdvisorProps) {
                 {status === "loading" ? "Thinking" : "Ready"}
               </span>
               <h3>
-                {status === "loading" ? "Opening the stream." : "Your analysis appears here."}
+                {status === "loading" ? "Analyzing the shot." : "Your shot analysis appears here."}
               </h3>
               <p>
                 Dose, yield, and time are enough to begin. Taste and context
