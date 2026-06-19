@@ -42,7 +42,7 @@ const SEA_LEVEL_TARGET_F = 200.3;
 const SEA_LEVEL_RANGE_F = "194.9-205.0°F";
 
 type TemperatureGuideProps = {
-  onElevationResolved?: (elevationFeet: number) => void;
+  onElevationResolved?: (elevationFeet: number | null) => void;
 };
 
 export function TemperatureGuide({ onElevationResolved }: TemperatureGuideProps) {
@@ -66,6 +66,7 @@ export function TemperatureGuide({ onElevationResolved }: TemperatureGuideProps)
     setStatus("loading");
     setError("");
     setResult(null);
+    onElevationResolved?.(null);
 
     try {
       const data = await fetchJson<TemperatureGuidance>(
@@ -76,6 +77,7 @@ export function TemperatureGuide({ onElevationResolved }: TemperatureGuideProps)
       setStatus("idle");
     } catch (fetchError) {
       setResult(null);
+      onElevationResolved?.(null);
       setError(getErrorMessage(fetchError));
       setStatus("error");
     }

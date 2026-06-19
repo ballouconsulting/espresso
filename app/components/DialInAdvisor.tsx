@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 import {
   roastLevels,
   shotAnalysisModels,
@@ -30,12 +30,14 @@ const roastOptions: Array<{ value: RoastLevel | ""; label: string }> = [
 ];
 
 type DialInAdvisorProps = {
-  prefilledElevationFeet: number | null;
+  elevationFeet: string;
+  onElevationFeetChange: (value: string) => void;
   targetRecipe: TargetRecipe;
 };
 
 export function DialInAdvisor({
-  prefilledElevationFeet,
+  elevationFeet,
+  onElevationFeetChange,
   targetRecipe,
 }: DialInAdvisorProps) {
   const [dose, setDose] = useState(targetRecipe.dose.toFixed(1));
@@ -44,7 +46,6 @@ export function DialInAdvisor({
   const [taste, setTaste] = useState<Taste | "">("");
   const [roastLevel, setRoastLevel] = useState<RoastLevel | "">("");
   const [brewTemperatureF, setBrewTemperatureF] = useState("");
-  const [elevationFeet, setElevationFeet] = useState("");
   const [notes, setNotes] = useState("");
   const [modelId, setModelId] = useState<ShotAnalysisModelId>(shotAnalysisModels[0].id);
   const [analysis, setAnalysis] = useState("");
@@ -55,12 +56,6 @@ export function DialInAdvisor({
   } | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (prefilledElevationFeet !== null) {
-      setElevationFeet(String(prefilledElevationFeet));
-    }
-  }, [prefilledElevationFeet]);
 
   const submitShot = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -246,7 +241,7 @@ export function DialInAdvisor({
                   label="Elevation"
                   max={20000}
                   min={-1500}
-                  onChange={setElevationFeet}
+                  onChange={onElevationFeetChange}
                   placeholder="0"
                   step={1}
                   value={elevationFeet}

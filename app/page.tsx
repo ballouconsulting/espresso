@@ -63,7 +63,7 @@ export default function Home() {
     yieldGrams: 36,
     ratioLabel: "1:2",
   });
-  const [zipElevationFeet, setZipElevationFeet] = useState<number | null>(null);
+  const [dialInElevationFeet, setDialInElevationFeet] = useState("");
   const [checked, setChecked] = useState<number[]>([]);
 
   const yieldWeight = useMemo(
@@ -221,11 +221,16 @@ export default function Home() {
       </section>
 
       <DialInAdvisor
-        prefilledElevationFeet={zipElevationFeet}
+        elevationFeet={dialInElevationFeet}
+        onElevationFeetChange={setDialInElevationFeet}
         targetRecipe={targetRecipe}
       />
 
-      <TemperatureGuide onElevationResolved={setZipElevationFeet} />
+      <TemperatureGuide
+        onElevationResolved={(elevationFeet) =>
+          setDialInElevationFeet(elevationFeet === null ? "" : String(elevationFeet))
+        }
+      />
 
       <section className="section shell" id="troubleshoot">
         <SectionHeading
