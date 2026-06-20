@@ -17,6 +17,7 @@ handlers provide the API endpoints and run with the rest of the site on Vercel.
 - Next.js + React + TypeScript
 - Plain CSS
 - Stateless Next.js API route handlers
+- LangChain model calls with LangSmith tracing for shot analysis
 - Vercel for deployment
 
 ## Run locally
@@ -27,6 +28,23 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+For AI shot analysis, keep provider keys in `.env.local` for local development
+or in Vercel Project Settings for Preview and Production:
+
+```bash
+OPENAI_API_KEY=...
+OLLAMA_API_KEY=...
+
+# Optional LangSmith tracing
+LANGSMITH_API_KEY=...
+LANGSMITH_TRACING=true
+LANGCHAIN_CALLBACKS_BACKGROUND=false
+```
+
+Do not prefix these with `NEXT_PUBLIC_`; they are read only by the server route.
+On Vercel, mark production and preview API keys as sensitive environment
+variables, then redeploy so new deployments receive the updated values.
 
 ## Production workflow
 
@@ -68,7 +86,8 @@ Dependencies are pinned in `package.json` and fully resolved in
 
 ## API
 
-All endpoints return JSON. Invalid requests use this error shape:
+Most endpoints return JSON. The shot analysis endpoint streams `text/plain`.
+Invalid requests use this JSON error shape:
 
 ```json
 {
@@ -82,19 +101,22 @@ All endpoints return JSON. Invalid requests use this error shape:
 }
 ```
 
-### Dial-in advisor
+### AI shot analysis
 
-`POST /api/dial-in` assesses a shot from its measured recipe and optional taste
-note. Taste can be `sour`, `bitter`, `both`, or `balanced`.
+`POST /api/dial-in` streams a one-shot AI analysis from the selected model. Dose,
+yield, time, and `modelId` are required. Taste, roast level, brew temperature,
+elevation, and notes are optional. Requests are stateless; no conversation
+history or shot data is stored.
 
 ```bash
 curl -X POST http://localhost:3000/api/dial-in \
   -H 'Content-Type: application/json' \
-  -d '{"doseGrams":18,"yieldGrams":36,"timeSeconds":22,"taste":"sour"}'
+  -d '{"doseGrams":18,"yieldGrams":36,"timeSeconds":22,"taste":"sour","modelId":"ollama-gemma4-31b"}'
 ```
 
-The response includes the measured ratio, extraction and pace assessments, and
-concrete next-shot suggestions. Taste takes priority over time.
+Supported model IDs are `ollama-gemma4-31b`, `ollama-nemotron-3-super`, and
+`openai-gpt-5-4-mini`. The server route reads provider keys from environment
+variables so API keys never ship to the browser.
 
 ### Brew calculator
 
@@ -140,3 +162,8 @@ the complete workflow.
 - [The Best Espresso Tutorial (Part 2) by Lance Hedrick](https://www.youtube.com/watch?v=I6ti6NMCqsc)
 - [Defining the Ever-Changing Espresso by David Fasman](https://sca.coffee/sca-news/25-magazine/issue-3/defining-ever-changing-espresso-25-magazine-issue-3)
 - [High Elevation Food Preparation Guide by Colorado State University Extension](https://extension.colostate.edu/resource/high-elevation-food-preparation-guide/)
+- [LangChain OpenAI integration](https://docs.langchain.com/oss/javascript/integrations/chat/openai)
+- [LangChain Ollama integration](https://docs.langchain.com/oss/javascript/integrations/chat/ollama)
+- [LangSmith LangChain tracing](https://docs.langchain.com/langsmith/trace-with-langchain)
+- [Ollama Cloud API](https://docs.ollama.com/cloud)
+- [Vercel environment variables](https://vercel.com/docs/environment-variables)

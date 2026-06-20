@@ -34,8 +34,9 @@ npm run lint
 npm run build
 ```
 
-Use `coderabbit review` locally for substantial or risky changes. Visually
-verify user-facing changes in a browser when practical.
+Use `coderabbit review --agent` locally for substantial or risky changes. Drop
+`--agent` only when a human-readable local review is preferred. Visually verify
+user-facing changes in a browser when practical.
 
 ## Documentation Approach
 

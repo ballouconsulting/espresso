@@ -41,7 +41,11 @@ const SEA_LEVEL_BOILING_F = 212;
 const SEA_LEVEL_TARGET_F = 200.3;
 const SEA_LEVEL_RANGE_F = "194.9-205.0°F";
 
-export function TemperatureGuide() {
+type TemperatureGuideProps = {
+  onElevationResolved?: (elevationFeet: number | null) => void;
+};
+
+export function TemperatureGuide({ onElevationResolved }: TemperatureGuideProps) {
   const [zip, setZip] = useState("");
   const [result, setResult] = useState<TemperatureGuidance | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
@@ -62,15 +66,18 @@ export function TemperatureGuide() {
     setStatus("loading");
     setError("");
     setResult(null);
+    onElevationResolved?.(null);
 
     try {
       const data = await fetchJson<TemperatureGuidance>(
         `/api/brew-temperature?zip=${encodeURIComponent(zip.trim())}`,
       );
       setResult(data);
+      onElevationResolved?.(data.location.elevation.feet);
       setStatus("idle");
     } catch (fetchError) {
       setResult(null);
+      onElevationResolved?.(null);
       setError(getErrorMessage(fetchError));
       setStatus("error");
     }
@@ -95,7 +102,7 @@ export function TemperatureGuide() {
           </p>
         </div>
 
-        <form className="temperature-card" onSubmit={submitZip}>
+        <form autoComplete="off" className="temperature-card" onSubmit={submitZip}>
           <div className="tool-card-top">
             <span>Location check</span>
             <span>ZIP centroid</span>
@@ -103,6 +110,7 @@ export function TemperatureGuide() {
           <label>
             <span>Your ZIP code</span>
             <input
+              autoComplete="off"
               inputMode="numeric"
               maxLength={5}
               onChange={(event) => setZip(event.currentTarget.value)}

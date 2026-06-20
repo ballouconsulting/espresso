@@ -48,11 +48,13 @@ For user-facing changes, inspect the relevant desktop and mobile layouts in a
 browser. For substantial or risky changes, also run:
 
 ```bash
-coderabbit review
+coderabbit review --agent
 ```
 
-The CodeRabbit CLI reviews local Git changes before publishing. CodeRabbit's
-GitHub integration separately reviews the final pull request diff.
+The CodeRabbit CLI reviews local Git changes before publishing. Use
+`coderabbit review --agent` by default for structured output a coding agent can
+act on; drop `--agent` when a human-readable local review is preferred.
+CodeRabbit's GitHub integration separately reviews the final pull request diff.
 
 If `gh auth status` reports an invalid token in a restricted environment,
 retry with normal network access before reauthenticating.

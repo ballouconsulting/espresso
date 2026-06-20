@@ -5,22 +5,131 @@ import { POST as calculate } from "../app/api/brew-calculator/route.ts";
 import { POST as advise } from "../app/api/dial-in/route.ts";
 import { calculateBrew } from "../lib/brew-calculator.ts";
 import { temperatureForZip, temperatureGuidance } from "../lib/brew-temperature.ts";
-import { assessShot } from "../lib/dial-in.ts";
+import {
+  handleShotAnalysisRequest,
+  parseShotAnalysisInput,
+  textFromChunk,
+} from "../lib/shot-analysis.ts";
+import { shotAnalysisModels } from "../lib/shot-analysis-options.ts";
 import { ApiError } from "../lib/api.ts";
 
-test("dial-in advisor prioritizes taste and returns concrete adjustments", () => {
-  const result = assessShot({
+test("shot analysis accepts required measurements without optional context", () => {
+  const result = parseShotAnalysisInput({
+    doseGrams: 18,
+    yieldGrams: 36,
+    timeSeconds: 28,
+    modelId: "openai-gpt-5-4-mini",
+  });
+
+  assert.equal(result.ratio, 2);
+  assert.equal(result.model.provider, "openai");
+  assert.equal(result.taste, undefined);
+  assert.equal(result.roastLevel, undefined);
+});
+
+test("dial-in endpoint streams model analysis chunks", async () => {
+  const request = jsonRequest("http://localhost/api/dial-in", {
     doseGrams: 18,
     yieldGrams: 36,
     timeSeconds: 22,
     taste: "sour",
+    roastLevel: "light",
+    modelId: "ollama-gemma4-31b",
+  });
+  const response = await handleShotAnalysisRequest(
+    request,
+    (model) => {
+      assert.equal(model, shotAnalysisModels[0]);
+
+      return {
+        async *stream(_messages, options) {
+          assert.equal(options?.signal, request.signal);
+          yield { content: "Snapshot: 1:2 in 22s.\n" };
+          yield { content: [{ text: "Next shot: grind a touch finer." }] };
+        },
+      };
+    },
+  );
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  const first = await reader.read();
+  const second = await reader.read();
+
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("Content-Type") ?? "", /text\/plain/);
+  assert.equal(decoder.decode(first.value), "Snapshot: 1:2 in 22s.\n");
+  assert.equal(decoder.decode(second.value), "Next shot: grind a touch finer.");
+});
+
+test("textFromChunk reads Ollama thinking deltas when content is empty", () => {
+  assert.equal(
+    textFromChunk({
+      content: "",
+      additional_kwargs: { reasoning_content: "Snapshot: 1:2 in 24s." },
+    }),
+    "Snapshot: 1:2 in 24s.",
+  );
+  assert.equal(
+    textFromChunk({
+      text: "Next shot: grind finer.",
+      content: "",
+    }),
+    "Next shot: grind finer.",
+  );
+});
+
+test("dial-in endpoint streams Nemotron-style thinking chunks", async () => {
+  const request = jsonRequest("http://localhost/api/dial-in", {
+    doseGrams: 18,
+    yieldGrams: 36,
+    timeSeconds: 24,
+    modelId: "ollama-nemotron-3-super",
   });
 
-  assert.equal(result.recipe.ratio, 2);
-  assert.equal(result.assessment.extraction, "likely-under");
-  assert.equal(result.assessment.pace, "fast");
-  assert.match(result.assessment.summary, /under-extracted/);
-  assert.match(result.suggestions[0].adjustment, /Grind finer/);
+  const response = await handleShotAnalysisRequest(
+    request,
+    (model) => {
+      assert.equal(model.id, "ollama-nemotron-3-super");
+
+      return {
+        async *stream(_messages, options) {
+          assert.equal(options?.signal, request.signal);
+          yield {
+            content: "",
+            additional_kwargs: { reasoning_content: "Snapshot: 1:2 in 24s.\n" },
+          };
+          yield { content: "Next shot: grind a touch finer." };
+        },
+      };
+    },
+  );
+
+  const text = await response.text();
+
+  assert.equal(response.status, 200);
+  assert.match(text, /Snapshot: 1:2 in 24s/);
+  assert.match(text, /grind a touch finer/);
+});
+
+test("dial-in endpoint returns readable provider errors before streaming", async () => {
+  const response = await handleShotAnalysisRequest(
+    jsonRequest("http://localhost/api/dial-in", {
+      doseGrams: 18,
+      yieldGrams: 36,
+      timeSeconds: 28,
+      modelId: "ollama-nemotron-3-super",
+    }),
+    () => ({
+      async *stream() {
+        throw new Error("this model requires a subscription, upgrade for access");
+      },
+    }),
+  );
+  const body = await response.json();
+
+  assert.equal(response.status, 502);
+  assert.equal(body.error.code, "model_unavailable");
+  assert.match(body.error.message, /requires access/);
 });
 
 test("dial-in endpoint validates required numeric fields", async () => {
@@ -28,6 +137,7 @@ test("dial-in endpoint validates required numeric fields", async () => {
     jsonRequest("http://localhost/api/dial-in", {
       doseGrams: 18,
       yieldGrams: 36,
+      modelId: "openai-gpt-5-4-mini",
     }),
   );
   const body = await response.json();
@@ -37,13 +147,14 @@ test("dial-in endpoint validates required numeric fields", async () => {
   assert.ok(body.error.fields.timeSeconds);
 });
 
-test("dial-in advisor rejects invalid direct-call measurements", () => {
+test("shot analysis rejects invalid direct-call measurements", () => {
   assert.throws(
     () =>
-      assessShot({
+      parseShotAnalysisInput({
         doseGrams: 0,
         yieldGrams: 36,
         timeSeconds: 30,
+        modelId: "openai-gpt-5-4-mini",
       }),
     (error: unknown) =>
       error instanceof ApiError &&

@@ -63,6 +63,7 @@ export default function Home() {
     yieldGrams: 36,
     ratioLabel: "1:2",
   });
+  const [dialInElevationFeet, setDialInElevationFeet] = useState("");
   const [checked, setChecked] = useState<number[]>([]);
 
   const yieldWeight = useMemo(
@@ -219,9 +220,17 @@ export default function Home() {
         </div>
       </section>
 
-      <DialInAdvisor targetRecipe={targetRecipe} />
+      <DialInAdvisor
+        elevationFeet={dialInElevationFeet}
+        onElevationFeetChange={setDialInElevationFeet}
+        targetRecipe={targetRecipe}
+      />
 
-      <TemperatureGuide />
+      <TemperatureGuide
+        onElevationResolved={(elevationFeet) =>
+          setDialInElevationFeet(elevationFeet === null ? "" : String(elevationFeet))
+        }
+      />
 
       <section className="section shell" id="troubleshoot">
         <SectionHeading
