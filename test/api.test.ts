@@ -40,7 +40,6 @@ test("dial-in endpoint streams model analysis chunks", async () => {
     request,
     (model) => {
       assert.equal(model, shotAnalysisModels[0]);
-      assert.equal(model.think, true);
 
       return {
         async *stream(_messages, options) {
@@ -62,19 +61,11 @@ test("dial-in endpoint streams model analysis chunks", async () => {
   assert.equal(decoder.decode(second.value), "Next shot: grind a touch finer.");
 });
 
-test("textFromChunk hides Ollama thinking but keeps answer content", () => {
+test("textFromChunk reads Ollama thinking deltas when content is empty", () => {
   assert.equal(
     textFromChunk({
       content: "",
-      additional_kwargs: { reasoning_content: "internal chain of thought" },
-      text: "internal chain of thought",
-    }),
-    "",
-  );
-  assert.equal(
-    textFromChunk({
-      content: "Snapshot: 1:2 in 24s.",
-      additional_kwargs: { reasoning_content: "already done thinking" },
+      additional_kwargs: { reasoning_content: "Snapshot: 1:2 in 24s." },
     }),
     "Snapshot: 1:2 in 24s.",
   );
@@ -99,17 +90,15 @@ test("dial-in endpoint streams Nemotron-style thinking chunks", async () => {
     request,
     (model) => {
       assert.equal(model.id, "ollama-nemotron-3-super");
-      assert.equal(model.think, true);
 
       return {
         async *stream(_messages, options) {
           assert.equal(options?.signal, request.signal);
           yield {
             content: "",
-            additional_kwargs: { reasoning_content: "internal reasoning only" },
-            text: "internal reasoning only",
+            additional_kwargs: { reasoning_content: "Snapshot: 1:2 in 24s.\n" },
           };
-          yield { content: "Snapshot: 1:2 in 24s.\nNext shot: grind a touch finer." };
+          yield { content: "Next shot: grind a touch finer." };
         },
       };
     },
@@ -118,7 +107,6 @@ test("dial-in endpoint streams Nemotron-style thinking chunks", async () => {
   const text = await response.text();
 
   assert.equal(response.status, 200);
-  assert.doesNotMatch(text, /internal reasoning/);
   assert.match(text, /Snapshot: 1:2 in 24s/);
   assert.match(text, /grind a touch finer/);
 });

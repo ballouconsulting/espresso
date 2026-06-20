@@ -12,14 +12,12 @@ export const shotAnalysisModels = [
     label: "Gemma 4 31B",
     provider: "ollama",
     model: "gemma4:31b",
-    think: true,
   },
   {
     id: "ollama-nemotron-3-super",
     label: "Nemotron 3 Super",
     provider: "ollama",
     model: "nemotron-3-super:cloud",
-    think: true,
   },
   {
     id: "openai-gpt-5-4-mini",
