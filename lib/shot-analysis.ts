@@ -8,10 +8,6 @@ import {
   readJsonObject,
 } from "./api.ts";
 import {
-  encodeShotAnalysisStreamEvent,
-  streamPartsFromChunk,
-} from "./shot-analysis-stream.ts";
-import {
   roastLevels,
   shotAnalysisModels,
   tastes,
@@ -31,6 +27,10 @@ export type ShotAnalysisInput = {
   brewTemperatureF?: number;
   elevationFeet?: number;
   notes?: string;
+};
+
+type LangChainChunk = {
+  content?: unknown;
 };
 
 type ShotAnalysisClient = {
@@ -73,7 +73,7 @@ export async function handleShotAnalysisRequest(
     return new Response(stream, {
       headers: {
         "Cache-Control": "no-store",
-        "Content-Type": "application/x-ndjson; charset=utf-8",
+        "Content-Type": "text/plain; charset=utf-8",
       },
     });
   } catch (error) {
@@ -145,20 +145,9 @@ export async function createShotAnalysisStream(
 
   return new ReadableStream<Uint8Array>({
     async start(controller) {
-      let thinkingCompleteSent = false;
-
       try {
         if (!firstChunk.done) {
-          enqueueStreamChunk(controller, encoder, firstChunk.value, () => {
-            if (thinkingCompleteSent) {
-              return;
-            }
-
-            thinkingCompleteSent = true;
-            controller.enqueue(
-              encoder.encode(encodeShotAnalysisStreamEvent({ type: "thinking_complete" })),
-            );
-          });
+          enqueueText(controller, encoder, firstChunk.value);
         }
 
         while (true) {
@@ -168,16 +157,7 @@ export async function createShotAnalysisStream(
             break;
           }
 
-          enqueueStreamChunk(controller, encoder, chunk.value, () => {
-            if (thinkingCompleteSent) {
-              return;
-            }
-
-            thinkingCompleteSent = true;
-            controller.enqueue(
-              encoder.encode(encodeShotAnalysisStreamEvent({ type: "thinking_complete" })),
-            );
-          });
+          enqueueText(controller, encoder, chunk.value);
         }
 
         controller.close();
@@ -199,29 +179,15 @@ async function firstStreamChunk(
   }
 }
 
-function enqueueStreamChunk(
+function enqueueText(
   controller: ReadableStreamDefaultController<Uint8Array>,
   encoder: TextEncoder,
   chunk: unknown,
-  onAnswerStart: () => void,
 ) {
-  const parts = streamPartsFromChunk(chunk);
+  const text = textFromChunk(chunk);
 
-  if (parts.thinking) {
-    controller.enqueue(
-      encoder.encode(
-        encodeShotAnalysisStreamEvent({ type: "thinking", delta: parts.thinking }),
-      ),
-    );
-  }
-
-  if (parts.answer) {
-    onAnswerStart();
-    controller.enqueue(
-      encoder.encode(
-        encodeShotAnalysisStreamEvent({ type: "answer", delta: parts.answer }),
-      ),
-    );
+  if (text) {
+    controller.enqueue(encoder.encode(text));
   }
 }
 
@@ -381,6 +347,106 @@ function formatShotForPrompt(input: ShotAnalysisInput) {
       : "Elevation: not provided",
     input.notes ? `Notes: ${input.notes}` : "Notes: not provided",
   ].join("\n");
+}
+
+export function textFromChunk(chunk: unknown) {
+  if (typeof chunk === "string") {
+    return chunk;
+  }
+
+  if (!chunk || typeof chunk !== "object") {
+    return "";
+  }
+
+  const record = chunk as Record<string, unknown>;
+  const contentText =
+    "content" in record ? visibleContentToText((record as LangChainChunk).content) : "";
+
+  if (contentText) {
+    return contentText;
+  }
+
+  if (reasoningTraceInChunk(record)) {
+    return "";
+  }
+
+  if (typeof record.text === "string" && record.text) {
+    return record.text;
+  }
+
+  return "";
+}
+
+function reasoningTraceInChunk(record: Record<string, unknown>) {
+  const additionalKwargs = record.additional_kwargs;
+  if (additionalKwargs && typeof additionalKwargs === "object") {
+    const reasoning = (additionalKwargs as Record<string, unknown>).reasoning_content;
+    if (typeof reasoning === "string" && reasoning) {
+      return true;
+    }
+  }
+
+  const content = record.content;
+  if (!Array.isArray(content)) {
+    return false;
+  }
+
+  return content.some((part) => {
+    if (!part || typeof part !== "object") {
+      return false;
+    }
+
+    const block = part as Record<string, unknown>;
+    return block.type === "reasoning" || block.type === "reasoning-delta";
+  });
+}
+
+export function contentToText(content: unknown): string {
+  return visibleContentToText(content);
+}
+
+function visibleContentToText(content: unknown): string {
+  if (typeof content === "string") {
+    return content;
+  }
+
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => visibleContentPartToText(part))
+      .join("");
+  }
+
+  return "";
+}
+
+function visibleContentPartToText(part: unknown): string {
+  if (typeof part === "string") {
+    return part;
+  }
+
+  if (!part || typeof part !== "object") {
+    return "";
+  }
+
+  const block = part as Record<string, unknown>;
+
+  if (block.type === "reasoning" || block.type === "reasoning-delta") {
+    return "";
+  }
+
+  if (typeof block.text === "string") {
+    return block.text;
+  }
+
+  if (block.type === "text-delta" && typeof block.text === "string") {
+    return block.text;
+  }
+
+  if (block.type === "text" && typeof block.text === "string") {
+    return block.text;
+  }
+
+  return "";
 }
 
 function round(value: number, places: number) {

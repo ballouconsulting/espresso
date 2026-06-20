@@ -8,8 +8,8 @@ import { temperatureForZip, temperatureGuidance } from "../lib/brew-temperature.
 import {
   handleShotAnalysisRequest,
   parseShotAnalysisInput,
+  textFromChunk,
 } from "../lib/shot-analysis.ts";
-import { streamPartsFromChunk } from "../lib/shot-analysis-stream.ts";
 import { shotAnalysisModels } from "../lib/shot-analysis-options.ts";
 import { ApiError } from "../lib/api.ts";
 
@@ -26,43 +26,6 @@ test("shot analysis accepts required measurements without optional context", () 
   assert.equal(result.taste, undefined);
   assert.equal(result.roastLevel, undefined);
 });
-
-async function readNdjsonStream(body: ReadableStream<Uint8Array>) {
-  const reader = body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  const events: Array<Record<string, unknown>> = [];
-
-  while (true) {
-    const { done, value } = await reader.read();
-
-    if (done) {
-      const finalText = decoder.decode();
-      if (finalText) {
-        buffer += finalText;
-      }
-      break;
-    }
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
-
-    for (const line of lines) {
-      if (!line.trim()) {
-        continue;
-      }
-
-      events.push(JSON.parse(line) as Record<string, unknown>);
-    }
-  }
-
-  if (buffer.trim()) {
-    events.push(JSON.parse(buffer) as Record<string, unknown>);
-  }
-
-  return events;
-}
 
 test("dial-in endpoint streams model analysis chunks", async () => {
   const request = jsonRequest("http://localhost/api/dial-in", {
@@ -88,38 +51,39 @@ test("dial-in endpoint streams model analysis chunks", async () => {
       };
     },
   );
-  const events = await readNdjsonStream(response.body!);
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  const first = await reader.read();
+  const second = await reader.read();
 
   assert.equal(response.status, 200);
-  assert.match(response.headers.get("Content-Type") ?? "", /application\/x-ndjson/);
-  assert.deepEqual(
-    events.map((event) => event.type),
-    ["answer", "thinking_complete", "answer"],
-  );
-  assert.equal(
-    events
-      .filter((event) => event.type === "answer")
-      .map((event) => event.delta)
-      .join(""),
-    "Snapshot: 1:2 in 22s.\nNext shot: grind a touch finer.",
-  );
+  assert.match(response.headers.get("Content-Type") ?? "", /text\/plain/);
+  assert.equal(decoder.decode(first.value), "Snapshot: 1:2 in 22s.\n");
+  assert.equal(decoder.decode(second.value), "Next shot: grind a touch finer.");
 });
 
-test("streamPartsFromChunk splits thinking and answer tokens", () => {
-  assert.deepEqual(
-    streamPartsFromChunk({
+test("textFromChunk hides Ollama thinking but keeps answer content", () => {
+  assert.equal(
+    textFromChunk({
       content: "",
-      additional_kwargs: { reasoning_content: "internal reasoning" },
-      text: "internal reasoning",
+      additional_kwargs: { reasoning_content: "internal chain of thought" },
+      text: "internal chain of thought",
     }),
-    { thinking: "internal reasoning" },
+    "",
   );
-  assert.deepEqual(
-    streamPartsFromChunk({
+  assert.equal(
+    textFromChunk({
       content: "Snapshot: 1:2 in 24s.",
-      additional_kwargs: { reasoning_content: "done thinking" },
+      additional_kwargs: { reasoning_content: "already done thinking" },
     }),
-    { thinking: "done thinking", answer: "Snapshot: 1:2 in 24s." },
+    "Snapshot: 1:2 in 24s.",
+  );
+  assert.equal(
+    textFromChunk({
+      text: "Next shot: grind finer.",
+      content: "",
+    }),
+    "Next shot: grind finer.",
   );
 });
 
@@ -151,15 +115,12 @@ test("dial-in endpoint streams Nemotron-style thinking chunks", async () => {
     },
   );
 
-  const events = await readNdjsonStream(response.body!);
+  const text = await response.text();
 
   assert.equal(response.status, 200);
-  assert.deepEqual(
-    events.map((event) => event.type),
-    ["thinking", "thinking_complete", "answer"],
-  );
-  assert.equal(events[0].delta, "internal reasoning only");
-  assert.equal(events[2].delta, "Snapshot: 1:2 in 24s.\nNext shot: grind a touch finer.");
+  assert.doesNotMatch(text, /internal reasoning/);
+  assert.match(text, /Snapshot: 1:2 in 24s/);
+  assert.match(text, /grind a touch finer/);
 });
 
 test("dial-in endpoint returns readable provider errors before streaming", async () => {
